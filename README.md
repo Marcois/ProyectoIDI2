@@ -1,18 +1,12 @@
 # ProyectoIDI2
 
-Setup Virtual Environments
-- source venv/bin/activate
-- venv\Scripts\activate
-
 ## Virtual Environment
-
----
 
 ### Windows
 
 ```powershell
 # Activate the venv (PowerShell)
-.\.venv\Scripts\Activate
+.\.env\Scripts\Activate
 
 # Restore dependencies
 python -m pip install -r requirements.txt
@@ -33,7 +27,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ```bash
 # Activate the venv
-source .venv/bin/activate
+source .env/bin/activate
 # Restore dependencies
 python -m pip install -r requirements.txt
 
@@ -56,3 +50,10 @@ pip list
 pip freeze > requirements.txt
 
 ```
+
+## Dependencies
+
+- **Numpy:** For array management
+- **Pytorch:** Used to create the dataset with all the augmentations
+- **CV2:** For image processing
+- **PyWavelets:** Used to get PRNU from the images
