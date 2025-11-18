@@ -10,7 +10,7 @@ from PIL import Image, ImageChops, ImageEnhance
 class ImageDataset(Dataset):
 
     def __init__(self, csv_path, transform=None, return_prnu=False, 
-                return_ela=False, ela_quality=90):
+                return_ela=False, ela_quality=90, img_num=10):
         """
         csv_path: Path for CSV with data from the images ["file_name", "label"]
         transform: torchvision transforms
@@ -18,7 +18,8 @@ class ImageDataset(Dataset):
         return_ela: True -> return ELA image
         ela_quality: JPEG quality for recompression
         """
-        self.df = pd.read_csv(csv_path)
+        self.df = pd.read_csv(csv_path, nrows=img_num)
+        print(len(self.df))
         self.transform = transform
         self.return_prnu = return_prnu
         self.return_ela = return_ela
@@ -36,6 +37,8 @@ class ImageDataset(Dataset):
         coeffsH = list(coeffs)
         coeffsH[0] *= 0
         denoised = pywt.waverec2(coeffsH, 'db4')
+
+        Image.fromarray(denoised).show()
 
         # Noise residual
         noise = gray - denoised        
