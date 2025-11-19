@@ -1,25 +1,46 @@
 from ImageDataset import ImageDataset 
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader
+from sklearn.model_selection import train_test_split
+from torchvision import transforms
+import pandas as pd
 
 IMAGES_NUM=10
 BATCH_SIZE=32
-dataset = ImageDataset(
-    csv_path="train.csv",
-    return_ela=True,
-    return_prnu=True,
-    img_num=IMAGES_NUM
+IMG_SIZE=384
+SEED=7
+
+df = pd.read_csv("train.csv", nrows=IMAGES_NUM)
+
+train_df, test_int_df = train_test_split(
+    df,
+    test_size=0.7,
+    random_state=SEED,
+    stratify=df["label"]
 )
 
-train_size = int(0.5 * IMAGES_NUM)
-validation_size = int(0.2 * IMAGES_NUM)
-test_size = int(IMAGES_NUM - train_size - validation_size)
+valid_df, test_df = train_test_split(
+    test_int_df,
+    test_size=0.5,
+    random_state=SEED
+)
 
-print(train_size, validation_size, test_size, dataset.__len__())
-train_dataset, validation_dataset, test_dataset = random_split(dataset, [0.8, 0.1, 0.1])
+train_transforms = transforms.Compose([
+    transforms.Resize((IMG_SIZE, IMG_SIZE)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+])
+
+train_dataset = ImageDataset(
+    df=train_df,
+    transform=train_transforms,
+    return_ela=True,
+    return_prnu=False,
+    img_size=IMG_SIZE
+)
 
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
-validation_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE)
-test_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE)
+# validation_loader = DataLoader(validation_dataset, batch_size=BATCH_SIZE)
+# test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
 for X, y in train_loader:
-    print(X)
+    print(X.shape)
