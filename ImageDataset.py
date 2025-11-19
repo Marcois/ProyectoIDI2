@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 import numpy as np
 import io
 import cv2
-from skimage.restoration import denoise_wavelet
+from scipy.signal import wiener
 from torchvision import transforms
 from PIL import Image, ImageChops, ImageEnhance
 
@@ -17,6 +17,7 @@ class ImageDataset(Dataset):
         return_prnu: True -> return (RGB+PRNU) 4-channel tensor
         return_ela: True -> return ELA image
         ela_quality: JPEG quality for recompression
+        img_size: Size of image for rescaling
         """
         self.df = df
         self.transform = transform if transform else transforms.ToTensor()
@@ -30,30 +31,13 @@ class ImageDataset(Dataset):
         rgb: rgb image
         Uses safe PRNU extraction (wavelet denoise -> noise residual).
         """
-        den = denoise_wavelet(rgb, multichanel=False, convert2ycbcr=False,
-                              method='BayesShrink', mode='soft')
-        
-        residual = rgb - den
-        # gray = cv2.cvtColor(np.array(rgb), cv2.COLOR_RGB2GRAY).astype(np.float32)
-
-        # # Wavelet denoise (remove content, leave noise)
-        # coeffs = pywt.wavedec2(rgb, 'db4', level=4)
-        # coeffsH = list(coeffs)
-        # coeffsH[0] *= 0
-        # denoised = pywt.waverec2(coeffsH, 'db4')
-
-        # print(denoised)
-        # Image.fromarray(denoised).show()
-
-        # # Noise residual
-        # noise = rgb - denoised        
-
-        # # Zero - mean
-        # noise = noise - np.mean(noise)
-
-        # # Normalize by intensity (avoid division by zero)
-        # prnu = noise / (gray + 1e-6)
-        return None
+        gray = cv2.cvtColor(np.array(rgb), cv2.COLOR_RGB2GRAY).astype(np.float32)
+        denoise = cv2.fastNlMeansDenoising(gray.astype(np.uint8), None, h=5, templateWindowSize=3, searchWindowSize=13)
+        noise = gray - denoise.astype(np.float32)
+        noise = noise - cv2.GaussianBlur(noise, (21,21), 0)
+        noise = wiener(noise, (5,5))
+        prnu = (noise - noise.min()) / (noise.max() - noise.min() + 1e-8)
+        return prnu
 
     def __extract_ela__(self, rgb):
         """
@@ -72,7 +56,6 @@ class ImageDataset(Dataset):
         scale = 255.0 / max_diff
         ela_img = ImageEnhance.Brightness(difference).enhance(scale)
 
-        ela_img.show()
         ela_np = np.array(ela_img).astype(np.float32)
         if ela_np.ndim == 3:
             ela_np = np.mean(ela_np, axis=2)
@@ -88,7 +71,6 @@ class ImageDataset(Dataset):
         label = self.df.iloc[index]["label"]
     
         rgb = Image.open(f"./{file_name}").convert("RGB")
-        rgb.show()
         rgb_tensor = self.transform(rgb)
 
         combined_tensor_arr = [rgb_tensor]

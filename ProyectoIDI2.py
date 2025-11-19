@@ -1,10 +1,14 @@
 from ImageDataset import ImageDataset 
 from torch.utils.data import DataLoader
+import torch
 from sklearn.model_selection import train_test_split
 from torchvision import transforms
 import pandas as pd
 
-IMAGES_NUM=10
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
+
+IMAGES_NUM=79950
 BATCH_SIZE=32
 IMG_SIZE=384
 SEED=7
@@ -34,11 +38,11 @@ train_dataset = ImageDataset(
     df=train_df,
     transform=train_transforms,
     return_ela=True,
-    return_prnu=False,
+    return_prnu=True,
     img_size=IMG_SIZE
 )
 
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True)
 # validation_loader = DataLoader(validation_dataset, batch_size=BATCH_SIZE)
 # test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE)
 
