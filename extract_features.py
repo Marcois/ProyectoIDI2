@@ -17,8 +17,8 @@ IMG_SIZE=256
 # ---------------------------
 def extract_handcrafted(img, gray, cfg=None):
     """
-    cfg: dict controlling what to include; if None uses defaults
-    returns: 1D numpy array (float32)
+    Generate handcrafted features for single image
+    cfg: dict controlling handcrafted features to include; if None uses defaults
     """
     if cfg is None:
         cfg = {
@@ -45,7 +45,7 @@ def extract_handcrafted(img, gray, cfg=None):
         feats.append(handcrafted_features.extract_frequency(gray))
     if cfg.get('use_colorstats', True):
         feats.append(handcrafted_features.extract_color_stats(img))
-    # concat and flatten
+    # flatten and concat
     feats = np.concatenate([f.flatten() for f in feats], axis=0).astype(np.float32)
     return feats
 
@@ -54,7 +54,10 @@ def extract_handcrafted(img, gray, cfg=None):
 # --------------------
 
 def build_processed_dataset(df, images_num, cfg=None, verbose=True):
-    """Generate dataset with handcrafted features and CNN embedded"""
+    """
+    Generate dataset with handcrafted features and CNN embedded
+    cfg: dict controlling handcrafted features to include; if None uses defaults
+    """
     image_paths = df['file_name']
     labels = df['label']
     print("Total images to process:", images_num)
@@ -79,7 +82,6 @@ def build_processed_dataset(df, images_num, cfg=None, verbose=True):
     handcrafted_feats = np.stack(handcrafted_feats, axis=0).astype(np.float32)
     # scaling for handcrafted
     scaler = StandardScaler()
-    scaler.fit(handcrafted_feats)
     handcrafted_feats = scaler.fit_transform(handcrafted_feats).astype(np.float32) 
 
     # CNN embedding extraction
@@ -95,15 +97,17 @@ def build_processed_dataset(df, images_num, cfg=None, verbose=True):
     print("handcrafted dim:", handcrafted_feats.shape[1])
     print("embedding dim:", embeddings.shape[1])
     print("total dim handcrafted + embedding:", handcrafted_feats.shape[1]+embeddings.shape[1])
+    
     img_features = np.concatenate([handcrafted_feats, embeddings], axis=1).astype(np.float32)
+    
     if img_features.shape[0] == images_num:
         print("all images processed")
     else:
         print(f"{img_features.shape[0]} images processed of {images_num}")
+    
     df = pd.DataFrame(img_features)
     df.insert(0, 'file_name', image_paths)
     df['label'] = labels
-
     return df
 
 
@@ -113,7 +117,6 @@ def build_processed_dataset(df, images_num, cfg=None, verbose=True):
 
 df_path = 'images_realvsAI.csv'
 df_processed_path = 'images_realvsAI_processed.csv'
-
 if os.path.exists(df_path):
     df = pd.read_csv(df_path, nrows=IMAGES_NUM)
     df_processed = build_processed_dataset(df, images_num=IMAGES_NUM)
