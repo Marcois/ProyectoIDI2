@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import pandas as pd
 from PIL import Image
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 import handcrafted_features
@@ -11,10 +12,9 @@ from CNNEmbedder import CNNEmbedder
 # Constants
 IMAGES_NUM=10000 # must be <= 79950 total images
 IMG_SIZE=256
+SEED=6
 
-# ---------------------------
 # Full handcrafted extractor
-# ---------------------------
 def extract_handcrafted(img, gray, cfg=None):
     """
     Generate handcrafted features for single image
@@ -49,10 +49,7 @@ def extract_handcrafted(img, gray, cfg=None):
     feats = np.concatenate([f.flatten() for f in feats], axis=0).astype(np.float32)
     return feats
 
-# --------------------
 # Dataset processing
-# --------------------
-
 def build_processed_dataset(df, images_num, cfg=None, verbose=True):
     """
     Generate dataset with handcrafted features and CNN embedded
@@ -112,15 +109,36 @@ def build_processed_dataset(df, images_num, cfg=None, verbose=True):
 
 
 # -------------------------------
-# Build processed dataset script
+# Build processed train, test and validation dataset script
 # -------------------------------
-
 df_path = 'images_realvsAI.csv'
-df_processed_path = 'images_realvsAI_processed.csv'
+df_train_path = 'images_realvsAI_train.csv'
+df_test_path = 'images_realvsAI_test.csv'
+df_val_path = 'images_realvsAI_val.csv'
 if os.path.exists(df_path):
     df = pd.read_csv(df_path, nrows=IMAGES_NUM)
     df_processed = build_processed_dataset(df, images_num=IMAGES_NUM)
-    df_processed.to_csv(df_processed_path, index=False)
-    print(f'csv file saved: {df_processed_path}')
+
+    # train and test dataset split
+    df_train, df_test_tmp = train_test_split(
+    df_processed,
+    test_size=0.7,
+    random_state=SEED,
+    stratify=df_processed["label"]
+    )
+    df_train.to_csv(df_train_path, index=False)
+    print(f'csv file saved: {df_train_path}')
+
+    # test and validation dataset split
+    df_test, df_val = train_test_split(
+    df_test_tmp,
+    test_size=0.5,
+    random_state=SEED
+    )
+    df_test.to_csv(df_test_path, index=False)
+    print(f'csv file saved: {df_test_path}')
+    df_val.to_csv(df_val_path, index=False)
+    print(f'csv file saved: {df_val_path}')
+
 else:
     print(f"Dataset {df_path} not found")

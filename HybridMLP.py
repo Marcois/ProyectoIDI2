@@ -96,7 +96,7 @@ class HybridMLP(nn.Module):
             if recall > best_recall:
                 best_recall = recall
                 best_epoch = epoch + 1
-                torch.save(self.state_dict(), "best_model.pth")
+                torch.save(self.state_dict(), "best_HybridMLP_model.pth")
 
             print(f"Epoch {epoch+1}/{epochs} | loss {running_loss:.4f} | val_loss {val_loss:.4f} | AUC {auc:.4f} | Recall {recall:.4f}")
 
