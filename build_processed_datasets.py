@@ -11,7 +11,7 @@ from CNNEmbedder import CNNEmbedder
 
 # Constants
 IMAGES_NUM=10000 # must be <= 79950 total images
-IMG_SIZE=256
+IMG_SIZE=224
 SEED=6
 
 # Full handcrafted extractor
@@ -56,14 +56,12 @@ def build_processed_dataset(df, images_num, cfg=None, verbose=True):
     cfg: dict controlling handcrafted features to include; if None uses defaults
     """
     image_paths = df['file_name']
-    labels = df['label']
     print("Total images to process:", images_num)
 
     # Resize and gray obtention
     imgs_preprocessed = []
-    for path in tqdm(image_paths, desc='resizing and obtaining grays', disable=not verbose):
+    for path in tqdm(image_paths, desc='Resizing and obtaining grays', disable=not verbose):
         try:
-            path = os.path.join('c:/Users/reyin/OneDrive/Documents/Git Repositories/ProyectoIDI2/', path)
             img = cv2.imread(path)
             img = cv2.resize(img, (IMG_SIZE, IMG_SIZE))
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) / 255.0
@@ -73,7 +71,7 @@ def build_processed_dataset(df, images_num, cfg=None, verbose=True):
 
     # Handcrafted extraction
     handcrafted_feats = []
-    for img_cv2, gray in tqdm(imgs_preprocessed, desc='extracting handcrafted', disable=not verbose):
+    for img_cv2, gray in tqdm(imgs_preprocessed, desc='Extracting handcrafted', disable=not verbose):
         feats = extract_handcrafted(img_cv2, gray, cfg=cfg)
         handcrafted_feats.append(feats)
     handcrafted_feats = np.stack(handcrafted_feats, axis=0).astype(np.float32)
@@ -84,7 +82,7 @@ def build_processed_dataset(df, images_num, cfg=None, verbose=True):
     # CNN embedding extraction
     embeddings = []
     cnn_embedder = CNNEmbedder()
-    for img_cv2, gray in tqdm(imgs_preprocessed, desc='extracting CNN embedding', disable=not verbose):
+    for img_cv2, gray in tqdm(imgs_preprocessed, desc='Extracting CNN embedding', disable=not verbose):
         img_pil = Image.fromarray(cv2.cvtColor(img_cv2, cv2.COLOR_BGR2RGB))
         emb = cnn_embedder.get(img_pil)
         embeddings.append(emb)
@@ -102,10 +100,10 @@ def build_processed_dataset(df, images_num, cfg=None, verbose=True):
     else:
         print(f"{img_features.shape[0]} images processed of {images_num}")
     
-    df = pd.DataFrame(img_features)
-    df.insert(0, 'file_name', image_paths)
-    df['label'] = labels
-    return df
+    df_processed = pd.DataFrame(img_features)
+    df_processed.insert(0, 'file_name', image_paths)
+    df_processed['label'] = df['label']
+    return df_processed
 
 
 # -------------------------------
@@ -136,8 +134,8 @@ if os.path.exists(df_path):
     random_state=SEED
     )
     df_test.to_csv(df_test_path, index=False)
-    print(f'csv file saved: {df_test_path}')
     df_val.to_csv(df_val_path, index=False)
+    print(f'csv file saved: {df_test_path}')
     print(f'csv file saved: {df_val_path}')
 
 else:
