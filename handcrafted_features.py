@@ -39,9 +39,9 @@ def extract_ela(img_bgr, quality=90):
 
 # Sobel
 def extract_sobel(img_bgr):
-    sobelx = cv2.Sobel(img_bgr, cv2.CV_64F, 1, 0, ksize=3) #Detecta bordes verticales
-    sobely = cv2.Sobel(img_bgr, cv2.CV_64F, 0, 1, ksize=3) #Detecta bordes horizontales
-    sobel_mag = np.sqrt(sobelx**2 + sobely**2) #magnitud total del gradiente
+    sobelx = cv2.Sobel(img_bgr, cv2.CV_64F, 1, 0, ksize=3) # detect vertical edges
+    sobely = cv2.Sobel(img_bgr, cv2.CV_64F, 0, 1, ksize=3) # detect horizontal edges
+    sobel_mag = np.sqrt(sobelx**2 + sobely**2) # compute gradient magnitude
     return np.array([
         np.mean(sobel_mag),
         np.std(sobel_mag),
