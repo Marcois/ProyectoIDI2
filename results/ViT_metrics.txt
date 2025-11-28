@@ -1,0 +1,5 @@
+--- ViT results evaluation ---
+Recall: 1.0000
+F1-score: 0.9888
+AUC: 1.0000
+Prediction time: 16.5798 seconds

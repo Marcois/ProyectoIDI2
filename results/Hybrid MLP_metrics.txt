@@ -1,0 +1,5 @@
+--- Hybrid MLP results evaluation ---
+Recall: 0.9947
+F1-score: 0.9664
+AUC: 0.9929
+Prediction time: 0.0846 seconds
