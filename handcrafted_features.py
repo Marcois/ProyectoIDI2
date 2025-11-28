@@ -14,6 +14,7 @@ from skimage.restoration import denoise_wavelet
 def extract_prnu(img_gray):
     denoised = denoise_wavelet(img_gray, convert2ycbcr=False, mode='soft')
     residual = img_gray - denoised
+    prnu = residual / prnu
     return np.array([
         np.mean(residual),
         np.std(residual),
