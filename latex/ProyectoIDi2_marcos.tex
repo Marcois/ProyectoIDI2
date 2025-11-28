@@ -1,0 +1,181 @@
+% Plantilla a utilizar
+\documentclass[14pt]{article}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{listings}
+
+% Datos del documento
+\title{
+\textbf{Modelo para la detección de imágenes generadas por IA} \\[1em]
+{\large Instituto Tecnológico de Estudios Superiores de Occidente (ITESO)}
+}
+
+\author{
+Roberto Garrido Hernández \\
+Marcos Antonio Fierros Estrada \\
+Rodrigo Emmanuel Macias Pantoja
+}
+
+\date{29 de Noviembre del 2025}
+
+
+% Desarrollo del documento
+\begin{document}
+\maketitle
+
+\section{Introducción}
+El rápido avance de los modelos generativos ha incrementado la necesidad de desarrollar sistemas capaces de detectar si una imagen fue creada por inteligencia artificial o capturada del mundo real. La facilidad con la que estas imágenes pueden manipular información visual plantea retos en ámbitos como la verificación digital, la seguridad, el periodismo y la prevención de desinformación.
+
+El presente trabajo tiene como objetivo desarrollar, entrenar y evaluar dos modelos distintos para la detección de imágenes generadas por IA, comparando su desempeño y seleccionando el mejor. El primer enfoque emplea un modelo híbrido que combina representaciones profundas extraídas con una CNN (embeddings CNN) junto con características diseñadas a mano (features handccrafted), las cuales se integran mediante un perceptrón multicapa (MLP). El segundo enfoque emplea un Vision Transformer (ViT) preentrenado, aprovechando técnicas modernas de transfer learning. La evaluación de los modelos se realizará utilizando y analizando métricas estándar de clasificación.
+
+
+\section{Marco Teórico}
+
+\subsection{Detección de imágenes generadas por IA}
+La detección de imágenes sintéticas busca identificar patrones sutiles introducidos por modelos generativos. Aunque estas imágenes pueden verse realistas al ojo humano, suelen contener artefactos estadísticos o estructurales que pueden ser detectados mediante técnicas de visión computacional. Los métodos de detección pueden utilizar características manuales, modelos de aprendizaje profundo o enfoques híbridos.
+
+\subsection{Redes Neuronales Convolucionales (CNN)}
+Una CNN es un tipo de red neuronal diseñada para procesar datos con estructura espacial, como imágenes. Sus capas convolucionales aprenden filtros que detectan bordes, texturas y patrones complejos. Las CNN suelen emplearse como extractores de características: en lugar de entrenarlas desde cero, se utilizan sus capas finales para obtener un embedding o vector que representa el contenido visual (por ejemplo, uno de 512 dimensiones). Este embedding puede luego combinarse con otros descriptores para entrenar un clasificador adicional.
+
+\subsection{Handcrafted features}
+Las características diseñadas a mano consisten en descriptores creados manualmente, basados en intuiciones o propiedades estadísticas de la imagen. Ejemplos comunes incluyen Histogram of Oriented Gradients (HOG), Local Binary Patterns (LBP), o métricas de ruido. En la detección de contenido sintético, estas características pueden capturar irregularidades que no siempre son evidentes para un modelo profundo por sí solo. Su combinación con embeddings de CNN permite crear modelos híbridos que integran conocimiento explícito con aprendizaje profundo.
+
+A continuación, se describen las características diseñadas que se utilizarán en el modelo híbrido:
+\begin{itemize}
+    \item \textbf{LBP\:}
+    \begin{itemize}
+        \item Captura textura local
+        \item Es robusto a cambios de iluminación
+    \end{itemize}
+    \item \textbf{ELA:}
+    \begin{itemize}
+        \item Detecta distribuciones irregulares de ruido.
+        \item Es usado para detectar ediciones en la imagen.
+    \end{itemize}
+    \item \textbf{PRNU:}
+    \begin{itemize}
+        \item Captura de la sensibilidad de luz en los diferentes pixeles.
+        \item Es una característica debido a errores en manufactura.
+        \item Está presente en todos los chips de sensores de imagen.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Error Level Analysis (ELA)}
+El patrón ELA se calcula codificando la imagen completa con el estándar JPEG a un nivel de calidad conocido, constante y normalmente alto (un valor típico es del 95\%). Posteriormente, la imagen decodificada del flujo de bits JPEG se resta de la imagen original.
+$$
+ELA_{img}=img-JPEG^{-1}[JPEG(img,95\%)]
+$$
+En caso de que encontremos una imagen editada, un patrón irregular con diferentes intensidades se encontrará en la imagen.
+
+\subsection{Photo Response Non-Uniformity (PRNU)}
+PRNU es un tipo de ruido usado para la identificación de cámaras utilizadas para tomar una fotografía. Se utilizará este tipo de característica pensando en que las imágenes generadas por IA no muestren imperfecciones.
+El PRNU es ruido multiplicativo que responde a la siguiente ecuación:
+$$
+Im_{out}=(I_{ones} + Noise_{cam}).Im_{in}+Noise_{add}
+$$
+donde $Im_{in}$ es la imagen "real" presentada por al cámara, $I_{ones}$ es una matriz llena de unos, $Noise_{cam}$ es el patrón de ruido del sensor, y $Im_{out}$ es 
+la imagen final proporcionada por la cámara. El símbolo $.$ significa el producto punto de las matrices, y $Noise_{add}$ es ruido añadido por otras fuentes.
+
+El PRNU es calculado utilizando una imagen y realizando un proceso de reducción de ruido con $Im_{out}$ y calculando el residuo:
+$$
+W = Im_{out} - denoise(Im_{out})
+$$
+
+Existen varias formas de realizar el filtro de ruido. En este caso se utilizó el algoritmo de BayesShrink proporcionado por la librería scikit-image.
+
+A continuación se presenta una imagen que ejemplifica el proceso de BayesShrink:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=10cm]{../img/sphx_glr_plot_denoise_wavelet_001.png}
+    \caption{BayesShrink}
+    \label{fig:denoise}
+\end{figure}
+
+Asumiendo que $I_m=denoise(Im_out)$, dada una colección de imágenes de la misma cámara el patrón de PRNU(también conocido como la huella dactilar de la cámara) se puede estimar de la siguiente manera:
+$$
+F = \frac{\sum_{n=1}^NW^nIm_in^n}{\sum_{n=1}^N(Im_{in}^2)}
+$$
+
+En nuestro caso, siempre calcularemos el PRNU utilizando una imagen $(N=1)$. Por lo tanto, nuestra ecuación final es la siguiente:
+$$
+F = \frac{W}{Im_{in}}
+$$
+
+\subsection{Perceptrón Multicapa (MLP)}
+El MLP es una red neuronal totalmente conectada compuesta por capas densas. En este trabajo se usa como clasificador final: recibe la concatenación del embedding de la CNN y el vector de características manuales, y aprende una función que asigna cada imagen a una de dos clases: real o generada por IA. Arquitecturas típicas incluyen capas como 256 → 64 → 1 con activaciones ReLU y salida sigmoidal para clasificación binaria.
+
+\subsection{Vision Transformer (ViT)}
+Los Vision Transformers son una arquitectura basada en transformers, originalmente diseñada para texto, pero adaptada para imágenes dividiéndolas en pequeños parches que funcionan como “tokens”. El ViT aprende relaciones globales entre estos parches mediante mecanismos de self-attention.
+
+El modelo seleccionado, google/vit-base-patch16-224-in21k, es un ViT entrenado en un conjunto de más de 14 millones de imágenes (ImageNet-21k). Mediante transfer learning, se ajustan sus pesos para la tarea específica de detección de imágenes generadas por IA, permitiendo obtener resultados robustos incluso con conjuntos de datos limitados.
+
+\subsection{Transfer learning}
+El transfer learning consiste en reutilizar modelos ya entrenados en tareas generales para resolver tareas nuevas con menos datos y menor tiempo de entrenamiento. En visión computacional, esto es común con CNNs o ViTs preentrenados: se aprovecha el conocimiento previo del modelo (capacidad para detectar formas, texturas y estructuras) y solo se ajustan sus capas finales. Esto mejora el desempeño y evita tener que entrenar desde cero.
+
+
+\section{Metodología}
+
+\subsection{Dataset y split de datos}
+El dataset consiste de imágenes autenticas tomadas de Shutterstock a través de varias categorías, incluyendo una selección balanceada donde uno de cada tres imágenes son de humanos. A la par de las imágenes auténticas, se encuentras sus equivalentes generados por modelos de inteligencia artificial generativa. Este emparejamiento estructurado nos permite hacer una comparación directa entre imágenes reales y generadas por IA, y proveen una base robusta para desarrollar y evaluar sistemas de detección de autenticidad de imágenes.
+A su vez, tenemos un .csv con la información de los datos:
+\begin{itemize}
+    \item ID
+    \item file\_name (String): Path de la imagen
+    \item label (bool): 1=Generada por IA, 0=Imagen Real
+\end{itemize}
+
+Se dividió el conjunto de datos en \textbf{70\%} para entrenamiento, \textbf{15\%} para validación y \textbf{15\%} para pruebas porque este es un estándar ampliamente utilizado en aprendizaje automático. El 70\% permite que el modelo aprenda patrones con suficiente cantidad de datos, mientras que el 15\% se usa para ajustar hiperparámetros sin afectar el rendimiento final. El 15\% restante se reserva para evaluar el modelo de manera objetiva con datos que no fueron utilizados durante el entrenamiento.
+\begin{lstlisting}[language=Python]
+df_train, df_test_tmp = train_test_split(
+    df_processed,
+    test_size=0.7,
+    random_state=SEED,
+    stratify=df_processed["label"]
+)
+df_train.to_csv(df_train_path, index=False)
+print(f'csv file saved: {df_train_path}')
+
+# test and validation dataset split
+df_test, df_val = train_test_split(
+    df_test_tmp,
+    test_size=0.5,
+    random_state=SEED
+)
+\end{lstlisting}
+Como resultado de esta división, el proceso generó tres archivos CSV separados, uno para cada subconjunto.
+
+\subsection{Preprocesamiento de imágenes}
+Para el preprocesamiento de las imágenes, primero las convertimos a escala de grises. Inicialmente, vimos que es una buena práctica para extraer las características de una imagen ua qie reduce la complejidad de la información de color y enfoca el entrenamiento en las características de textura y patrón. Liego normalizamos los valores de los píxeles RGB dividiéndolos entre 255, para que estén en el rango [0,1], lo que facilita la convergencia durante el entrenamiento.
+
+Luego, todas las imágenes fueron escaladas a 224x225 píxeles, ya que es el tamaño predeterminado para los modelos VIsion Transformer(ViT). Mantener esa resolución asegura que los patch embeddings y positional embeddings del VIt se alineen correctamente con los pesos preenetrenados, evitando inconsistencias durante el entrenamiento. Además, utilizar la misma resolución para todas las imágenes nos permitió entrenar de manera consistente todos los modelos, facilitando la comparación de resultados y garantizando que cada modelo reciba datos con la misma estructura de entrada.
+
+A continuación, el código utilizado para procesar las imágenes:
+\begin{lstlisting}[language=Python]
+img = cv2.imread(path)
+img = cv2.resize(img, (IMG_SIZE, IMG_SIZE))
+gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) / 255.0
+\end{lstlisting}
+
+Ya con las imágenes preprocesados pasamos a hacer la extracción de características.
+
+\subsection{Extracción de Características}
+
+\subsubsection{ELA}
+
+
+\section{Resultados}
+ToDo+
+
+
+\section{Conclusiones}
+ToDo
+
+
+\section*{Referencias}
+ToDo
+
+
+\section*{Anexos}
+ToDo
+
+\end{document}
