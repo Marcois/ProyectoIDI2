@@ -17,7 +17,7 @@ SEED=6
 # Full handcrafted extractor
 def extract_handcrafted(img, gray, cfg=None):
     """
-    Generate handcrafted features for single image
+    Generate handcrafted features for a single image
     cfg: dict controlling handcrafted features to include; if None uses defaults
     """
     if cfg is None:
@@ -59,6 +59,7 @@ def build_processed_dataset(df, images_num, cfg=None, verbose=True):
     print("Total images to process:", images_num)
 
     # Resize and gray obtention
+    # Using cv2 with BGR input; conversion to gray/255 normalizes into [0,1].
     imgs_preprocessed = []
     for path in tqdm(image_paths, desc='Resizing and obtaining grays', disable=not verbose):
         try:
@@ -93,6 +94,7 @@ def build_processed_dataset(df, images_num, cfg=None, verbose=True):
     print("embedding dim:", embeddings.shape[1])
     print("total dim handcrafted + embedding:", handcrafted_feats.shape[1]+embeddings.shape[1])
     
+    # Combined representation = handcrafted + CNN embedding (hybrid feature vector)
     img_features = np.concatenate([handcrafted_feats, embeddings], axis=1).astype(np.float32)
     
     if img_features.shape[0] == images_num:
@@ -106,26 +108,37 @@ def build_processed_dataset(df, images_num, cfg=None, verbose=True):
     return df_processed
 
 
-# -------------------------------
+# ----------------------------------------------------------
 # Build processed train, test and validation dataset script
-# -------------------------------
+# ----------------------------------------------------------
+# 70% train, 15% test, 15% val
+
 df_path = 'images_realvsAI.csv'
-df_train_path = 'images_realvsAI_train.csv'
-df_test_path = 'images_realvsAI_test.csv'
-df_val_path = 'images_realvsAI_val.csv'
+df_hybrid_train_path = 'images_realvsAI_hybrid_train.csv'
+df_hybrid_test_path = 'images_realvsAI_hybrid_test.csv'
+df_hybrid_val_path = 'images_realvsAI_hybrid_val.csv'
+df_vit_train_path = 'images_realvsAI_vit_train.csv'
+df_vit_test_path = 'images_realvsAI_vit_test.csv'
+df_vit_val_path = 'images_realvsAI_vit_val.csv'
+
+# Ensure dataset exist before processing
 if os.path.exists(df_path):
     df = pd.read_csv(df_path, nrows=IMAGES_NUM)
+
+    # ----- Datasets of Hybrid model -----
     df_processed = build_processed_dataset(df, images_num=IMAGES_NUM)
+    
+    print('--- Datasets for hybrid model: ---')
 
     # train and test dataset split
     df_train, df_test_tmp = train_test_split(
     df_processed,
-    test_size=0.7,
+    test_size=0.3,
     random_state=SEED,
     stratify=df_processed["label"]
     )
-    df_train.to_csv(df_train_path, index=False)
-    print(f'csv file saved: {df_train_path}')
+    df_train.to_csv(df_hybrid_train_path, index=False)
+    print(f'csv file saved: {df_hybrid_train_path}')
 
     # test and validation dataset split
     df_test, df_val = train_test_split(
@@ -133,10 +146,34 @@ if os.path.exists(df_path):
     test_size=0.5,
     random_state=SEED
     )
-    df_test.to_csv(df_test_path, index=False)
-    df_val.to_csv(df_val_path, index=False)
-    print(f'csv file saved: {df_test_path}')
-    print(f'csv file saved: {df_val_path}')
+    df_test.to_csv(df_hybrid_test_path, index=False)
+    df_val.to_csv(df_hybrid_val_path, index=False)
+    print(f'csv file saved: {df_hybrid_test_path}')
+    print(f'csv file saved: {df_hybrid_val_path}')
+
+    # ----- Datasets of ViT model -----
+    print('\n--- Datasets for ViT model: ---')
+
+    # train and test dataset split
+    df_train, df_test_tmp = train_test_split(
+    df,
+    test_size=0.3,
+    random_state=SEED,
+    stratify=df_processed["label"]
+    )
+    df_train.to_csv(df_vit_train_path, index=False)
+    print(f'csv file saved: {df_vit_train_path}')
+
+    # test and validation dataset split
+    df_test, df_val = train_test_split(
+    df_test_tmp,
+    test_size=0.5,
+    random_state=SEED
+    )
+    df_test.to_csv(df_vit_test_path, index=False)
+    df_val.to_csv(df_vit_val_path, index=False)
+    print(f'csv file saved: {df_vit_test_path}')
+    print(f'csv file saved: {df_vit_val_path}')
 
 else:
     print(f"Dataset {df_path} not found")
