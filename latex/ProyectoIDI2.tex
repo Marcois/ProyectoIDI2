@@ -5,6 +5,8 @@
 \usepackage{float}
 \usepackage{listings}
 
+\renewcommand{\refname}{} %se uso para quitar references
+
 % Datos del documento
 \title{
 \textbf{Modelo para la detección de imágenes generadas por IA} \\[1em]
@@ -19,10 +21,11 @@ Rodrigo Emmanuel Macias Pantoja
 
 \date{29 de Noviembre del 2025}
 
-
 % Desarrollo del documento
 \begin{document}
 \maketitle
+
+\newpage
 
 \section{Introducción}
 El rápido avance de los modelos generativos ha incrementado la necesidad de desarrollar sistemas capaces de detectar si una imagen fue creada por inteligencia artificial (IA) o capturada del mundo real. La facilidad con la que estas imágenes pueden manipular información visual plantea retos en ámbitos como la verificación digital, la seguridad, el periodismo y la prevención de desinformación.
@@ -299,6 +302,61 @@ Todas las imágenes del conjunto de datos fueron preprocesadas y normalizadas a 
 \subsubsection*{2. Extracción de Características Manuales (\texttt{handcrafted features})}
 Para capturar artefactos y estadísticas sutiles introducidas por los modelos generativos, se implementó un extractor de características manuales. Este vector final de \textbf{58 dimensiones} se construye a partir de la concatenación de las siguientes técnicas forenses:
 
+\section{Metodología}
+\subsection{Procesamiento de Datos}
+
+El desarrollo se enfoca en la preparación del conjunto de datos inicial para generar las representaciones que serán utilizadas por el modelo \textbf{MLP Híbrido}. 
+
+El procesamiento se centró en la uniformidad de las imágenes y la extracción del vector de características híbrido y del embedding de la CNN.
+
+\subsubsection*{1. Preprocesamiento de Imágenes}
+Todas las imágenes del conjunto de datos fueron preprocesadas y normalizadas a una resolución fija de 224x224 píxeles. Adicionalmente, se obtuvo la versión en escala de grises para el cálculo de ciertas características forenses.
+
+\subsubsection*{2. Extracción de Características Manuales (\texttt{handcrafted features})}
+Para capturar artefactos y estadísticas sutiles introducidas por los modelos generativos, se implementó un extractor de características manuales. Este vector final de \textbf{58 dimensiones} se construye a partir de la concatenación de las siguientes técnicas forenses:
+%-----------------------------------------
+\begin{itemize}
+    \item \textbf{Sobel (Detección de Bordes)}: 
+    \begin{enumerate}
+        \item Se aplicaron filtros Sobel en las direcciones horizontal ($G_x$) y vertical ($G_y$) sobre la versión en escala de grises de la imagen.
+        \item Se calculó la magnitud del gradiente en cada píxel:
+\[
+        M(x,y) = \sqrt{G_x(x,y)^2 + G_y(x,y)^2}
+        \]
+        
+        \item A partir de la magnitud se extrajeron estadísticas globales: la media y la desviación estándar, que reflejan la intensidad y variabilidad de los bordes.
+        \item Estas métricas permiten diferenciar imágenes reales (bordes afectados por ruido y condiciones físicas) de imágenes IA (bordes más uniformes y definidos).
+    \end{enumerate}
+
+    \item \textbf{Haralick/GLCM (Texturas)}:
+    \begin{enumerate}
+        \item Se construyó la \textit{Gray-Level Co-occurrence Matrix} (GLCM) considerando una distancia de 1 píxel y dirección horizontal.
+        \item A partir de la GLCM se calcularon las siguientes propiedades:
+        \begin{itemize}
+            \item \textbf{Contraste}: mide la variación local de intensidades.
+            \item \textbf{Homogeneidad}: evalúa la uniformidad de la textura.
+            \item \textbf{Energía}: refleja la repetitividad de patrones.
+            \item \textbf{Correlación}: mide la dependencia lineal entre intensidades vecinas.
+        \end{itemize}
+        \item Estas características permiten identificar texturas naturales (con irregularidades propias de materiales y sensores) frente a texturas sintéticas (más uniformes o repetitivas).
+    \end{enumerate}
+
+    \item \textbf{Histograma (Distribución Global de Intensidades)}:
+    \begin{enumerate}
+        \item Se calculó el histograma de intensidades en escala de grises, dividiendo el rango [0,255] en 32 \textit{bins}.
+        \item Cada bin representa la proporción de píxeles cuya intensidad cae en ese intervalo, normalizando la distribución:
+        
+\[
+        h_i = \frac{n_i}{N}, \quad \sum_{i=1}^{32} h_i = 1
+        \]
+
+        \item El vector de frecuencias resultante describe la tonalidad global de la imagen.
+        \item Imágenes reales presentan irregularidades en la distribución por condiciones de iluminación y ruido; imágenes IA tienden a mostrar distribuciones más uniformes o artificialmente balanceadas.
+    \end{enumerate}
+\end{itemize}
+
+%------------------------------------------------
+
 \begin{itemize}
     \item \textbf{PRNU} (\textit{Photo-Response Non-Uniformity}): Residuo de ruido intrínseco de la cámara, útil para identificar manipulaciones.
 
@@ -508,7 +566,7 @@ Tiempo de Predicción & $16.5798$ s & Alto costo computacional por la complejida
 \subsubsection*{Análisis de la Curva ROC AUC (ViT)}
 La curva ROC para el modelo ViT (Figura \ref{fig:roc_vit}) confirma su capacidad discriminativa, alcanzando un Área Bajo la Curva (AUC) de $1.0000$. La curva se eleva de manera inmediata, indicando una Tasa de Verdaderos Positivos del 100\% con una Tasa de Falsos Positivos casi nula, demostrando una separación ideal entre las clases.
 
-\begin{figure}[h]
+\begin{figure}[H]
     \centering
     \includegraphics[width=0.7\textwidth]{../results/ViT_roc_curve.png}
     \caption{Curva ROC AUC del modelo Vision Transformer (ViT).}
@@ -541,10 +599,63 @@ El ViT demostró ser marginalmente superior en precisión absoluta (Recall de $1
 
 
 \section*{Referencias}
-ToDo
 
+\begin{thebibliography}{99}
+
+\bibitem{Lofstedt2019}
+Löfstedt T, Brynolfsson P, Asklund T, Nyholm T, Garpebring A (2019).
+Gray-level invariant Haralick texture features.
+\textit{PLoS ONE}, 14(2): e0212110.
+\url{https://doi.org/10.1371/journal.pone.0212110}
+
+\bibitem{Ojala1994}
+Ojala T., Pietikäinen M., Harwood D. (1994).
+Performance evaluation of texture measures with classification based on Kullback discrimination of distributions.
+\textit{Proceedings of the 12th IAPR International Conference on Pattern Recognition (ICPR 1994)}, vol. 1, pp. 582–585.
+
+\bibitem{SobelFilter}
+Sobel Filter (s.f.).
+\textit{ScienceDirect Topics}.
+\url{https://www.sciencedirect.com/topics/computer-science/sobel-filter}
+
+\bibitem{HistogramProcessing}
+Nguyen Khanh Son (2023).
+Unlocking Image Enhancement: A Guide to Histogram Processing and Equalization with OpenCV.
+\textit{Medium}.
+\url{https://medium.com/@khanhson0811/unlocking-image-enhancement-a-guide-to-histogram-processing-and-equalization-with-opencv-8db4477e6ba6}
+
+\bibitem{ScikitImageGLCM}
+scikit-image (s.f.).
+GLCM Texture Features Documentation.
+\textit{scikit-image}.
+\url{https://scikit-image.org/docs/stable/auto_examples/features_detection/plot_glcm.html}
+
+\bibitem{MartinRodriguez2023}
+Martín-Rodríguez F., García-Mojón R., Fernández-Barciela M. (2023).
+Detection of AI-Created Images Using Pixel-Wise Feature Extraction and Convolutional Neural Networks.
+\textit{Sensors}, 23(22): 9037.
+\url{https://pmc.ncbi.nlm.nih.gov/articles/PMC10674908/}
+
+\bibitem{ScikitImage2023}
+van der Walt, S., Schönberger, J. L., Nunez-Iglesias, J., Boulogne, F., Warner, J. D., Yang, Z. (2023).
+scikit-image: Image processing in Python.
+\textit{scikit-image documentation}.
+\url{https://scikit-image.org/docs/stable/api/api.html}
+
+\bibitem{Bradski2023}
+Bradski, G. (2023).
+OpenCV: Drawing functions.
+\textit{OpenCV Documentation}.
+\url{https://docs.opencv.org/4.x/d6/d6e/group__imgproc__draw.html}
+
+\end{thebibliography}
 
 \section*{Anexos}
-ToDo
+
+\section*{Disponibilidad del Código}
+
+El código implementado y utilizado durante el desarrollo del presente trabajo se encuentra disponible en el siguiente repositorio oficial: 
+
+\url{https://github.com/Marcois/ProyectoIDI2}
 
 \end{document}
