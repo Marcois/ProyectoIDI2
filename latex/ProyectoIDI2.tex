@@ -209,9 +209,9 @@ $$
 W = Im_{out} - denoise(Im_{out})
 $$
 
-Existen varias formas de realizar el filtro de ruido. Nosotros utilizamos el wavelet denoising, este mismo tiene un proceso de umbralización el cual decide qé píxeles son "claros" y cuáles son "oscuros" comparándolos con un valor límite (umbral). Los píxeles por encima del umbral toman un valor (ej, blanco) y los demás toman otro (ej, negro).
+Existen varias formas de realizar el filtro de ruido. Nosotros utilizamos el wavelet denoising, este mismo tiene un proceso de umbralización el cual decide que píxeles son "claros" y cuáles son "oscuros" comparándolos con un valor límite (umbral). Los píxeles por encima del umbral toman un valor (ej, blanco) y los demás toman otro (ej, negro).
 Por default, nosotros utilizamos el método de BayesShinrk para realizar la umbralización.
-A continuación se presenta una imagen que ejemplifica el proceso de BayesShrink:
+A continuación, se presenta una imagen que ejemplifica el proceso de BayesShrink:
 \begin{figure}[H]
     \centering
     \includegraphics[width=10cm]{../img/sphx_glr_plot_denoise_wavelet_001.png}
@@ -301,19 +301,6 @@ Todas las imágenes del conjunto de datos fueron preprocesadas y normalizadas a 
 
 \subsubsection*{2. Extracción de Características Manuales (\texttt{handcrafted features})}
 Para capturar artefactos y estadísticas sutiles introducidas por los modelos generativos, se implementó un extractor de características manuales. Este vector final de \textbf{58 dimensiones} se construye a partir de la concatenación de las siguientes técnicas forenses:
-
-\section{Metodología}
-\subsection{Procesamiento de Datos}
-
-El desarrollo se enfoca en la preparación del conjunto de datos inicial para generar las representaciones que serán utilizadas por el modelo \textbf{MLP Híbrido}. 
-
-El procesamiento se centró en la uniformidad de las imágenes y la extracción del vector de características híbrido y del embedding de la CNN.
-
-\subsubsection*{1. Preprocesamiento de Imágenes}
-Todas las imágenes del conjunto de datos fueron preprocesadas y normalizadas a una resolución fija de 224x224 píxeles. Adicionalmente, se obtuvo la versión en escala de grises para el cálculo de ciertas características forenses.
-
-\subsubsection*{2. Extracción de Características Manuales (\texttt{handcrafted features})}
-Para capturar artefactos y estadísticas sutiles introducidas por los modelos generativos, se implementó un extractor de características manuales. Este vector final de \textbf{58 dimensiones} se construye a partir de la concatenación de las siguientes técnicas forenses:
 %-----------------------------------------
 \begin{itemize}
     \item \textbf{Sobel (Detección de Bordes)}: 
@@ -365,11 +352,11 @@ Para capturar artefactos y estadísticas sutiles introducidas por los modelos ge
         \item Reducción de ruido mediante Transformada wavelet
 
         En esta etapa aplicamos un filtro de wavelet denoising a la imagen. Esto con el objetivo de estimar la componente estructural "limpia" de la imagen.
-        El sensor posee ruido propio, pero ese ruido queda principalmente en la image sin denoise. POr lo tanto, aplicar un suavizado wavelets obtenemos una aproximacion de contenido real sin ruido.
+        El sensor posee ruido propio, pero ese ruido queda principalmente en la imagen sin denoise. Por lo tanto, aplicar un suavizado wavelets obtenemos una aproximacion de contenido real sin ruido.
         Para utilizar la función de denoising se utilizaron los parámetros siguientes:
         \begin{itemize}
             \item image (ndarray). Imagen a la que se le aplicara el denoising.
-            \item mode (soft,hard).  Es un parámetro opcional para mencionar cual es el tipo de denoising utilizado. La documentación comenta que utilizar "soft" regresa los mejores resultados, por lo tanto, nosotros utilizamos "soft".
+            \item mode (soft,hard).  Es un parámetro opcional para mencionar cual es el tipo de denoising utilizado. La documentación comenta que utilizar "soft" regresa los mejores resultados. Por lo tanto, nosotros utilizamos "soft".
             \item convert2ybcr (bool). Convierte la imagen en YCbCr. Este parámetro se quedo en False porque queremos que nos regrese al imagen en RGB para compararlo con la imagen inicial.
             \item method (BayesShrink, VIsuShrink). Son los métodos que se pueden utilizar para umbralización. Por default, se utilizó el BayesShrink.
         \end{itemize}
@@ -390,7 +377,7 @@ Para capturar artefactos y estadísticas sutiles introducidas por los modelos ge
     \end{enumerate}
     \item \textbf{ELA} (\textit{Error Level Analysis}): Destaca diferencias en el nivel de compresión JPEG, indicando áreas de edición o falsificación.
 
-    EL proceso que realiza el código es el siguiente:
+    El proceso que realiza el código es el siguiente:
 
     \begin{enumerate}
         \item Conversión de formato de color
@@ -421,11 +408,6 @@ Para capturar artefactos y estadísticas sutiles introducidas por los modelos ge
 
         Finalmente, la imagen de diferencias se convierte a escala de grises, lo que simplifica la visualización de los niveles de error.
     \end{enumerate}
-    \item \textbf{Sobel}: Detector de bordes.
-    \item \textbf{LBP} (\textit{Local Binary Patterns}): Descriptor de textura.
-    \item \textbf{GLCM} (\textit{Gray-Level Co-Occurrence Matrix}): Estadísticas de textura.
-    \item \textbf{FFT} (\textit{Fast Fourier Transform}): Análisis del dominio de la frecuencia, útil para detectar patrones de generación.
-    \item \textbf{Color Stats}: Estadísticas básicas del espacio de color.
 \end{itemize}
 
 \subsubsection*{3. Extracción de Embeddings CNN (ResNet50)}
@@ -596,7 +578,8 @@ Velocidad de Predicción & $16.58$ segundos & $\mathbf{0.08}$ segundos \\
 
 El ViT demostró ser marginalmente superior en precisión absoluta (Recall de $1.0000$), siendo ideal para aplicaciones críticas donde la minimización de Falsos Negativos es la prioridad absoluta. Sin embargo, el Hybrid MLP es \textbf{más de 200 veces más rápido} en el tiempo de predicción, ofreciendo una solución de alto rendimiento y eficiencia computacional. La alta efectividad de ambos modelos sugiere que tanto los \textit{features} extraídos por *transformers* como la combinación de descriptores convolucionales y manuales son metodologías robustas para la detección de imágenes sintéticas.
 
-
+Las características manuales (Sobel, Haralick/GLCM, Histogramas, LBP, PRNU y ELA) aportaron información complementaria que enriqueció la representación visual. Aunque algunas de ellas mostraron un poder discriminativo limitado de manera individual, su integración en un vector conjunto permitió capturar artefactos sutiles que los modelos profundos no detectan fácilmente. 
+El modelo híbrido evidenció que la combinación de descriptores forenses con embeddings de CNN mejora la capacidad de detección en escenarios donde las imágenes sintéticas imitan fielmente las distribuciones naturales. Esto confirma que las features manuales son útiles para reforzar la sensibilidad del sistema frente a irregularidades estadísticas y texturales.
 
 \section*{Referencias}
 
@@ -647,6 +630,13 @@ Bradski, G. (2023).
 OpenCV: Drawing functions.
 \textit{OpenCV Documentation}.
 \url{https://docs.opencv.org/4.x/d6/d6e/group__imgproc__draw.html}
+
+\bibitem{Sala2023}
+Sala, A. (2023).
+AI vs Human Generated Dataset.
+\textit{Kaggle}.
+\url{https://www.kaggle.com/datasets/alessandrasala79/ai-vs-human-generated-dataset}
+
 
 \end{thebibliography}
 
