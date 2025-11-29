@@ -146,6 +146,7 @@ Como resultado de esta división, el proceso generó tres archivos CSV separados
 
 \subsection{Preprocesamiento de imágenes}
 Para el preprocesamiento de las imágenes, primero las convertimos a escala de grises. Inicialmente, vimos que es una buena práctica para extraer las características de una imagen ua qie reduce la complejidad de la información de color y enfoca el entrenamiento en las características de textura y patrón. Liego normalizamos los valores de los píxeles RGB dividiéndolos entre 255, para que estén en el rango [0,1], lo que facilita la convergencia durante el entrenamiento.
+Hay que añadir que no todos los procesos de extracción necesitaron una image en escala de grises. Se pasó directamente la imagen en BGR.
 
 Luego, todas las imágenes fueron escaladas a 224x225 píxeles, ya que es el tamaño predeterminado para los modelos VIsion Transformer(ViT). Mantener esa resolución asegura que los patch embeddings y positional embeddings del VIt se alineen correctamente con los pesos preenetrenados, evitando inconsistencias durante el entrenamiento. Además, utilizar la misma resolución para todas las imágenes nos permitió entrenar de manera consistente todos los modelos, facilitando la comparación de resultados y garantizando que cada modelo reciba datos con la misma estructura de entrada.
 
@@ -161,6 +162,57 @@ Ya con las imágenes preprocesados pasamos a hacer la extracción de caracterís
 \subsection{Extracción de Características}
 
 \subsubsection{ELA}
+ELA se basa en identificar diferencias en los niveles de compresión entre distintas zonas de una imagen JPEG. Las áreas editadas suelen presentar errores de compresión distintos al resto de la imagen original.
+
+EL proceso que realiza el código es el siguiente:
+
+\begin{enumerate}
+    \item Conversión de formato de color
+    
+    La imagen cargada por OpenCV está en formato BGR, por lo que primero se convierte a RGB para trabajar en un espacio de color estándar.
+    \begin{lstlisting}[language=Python]
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    \end{lstlisting}
+    \item Recompresión controlada en JPEG
+    
+    La imagen se vuelve a comprimir artificialmente utilizando un nivel de calidad definido. Esta recompresión introduce errores predecibles.
+    La función de codificación recibe como parámetros lo siguiente:
+    \begin{itemize}
+        \item ext (String). Es la extensión del archivo. Nosotros guardaremos en .jpg.
+        \item img (InputArray). Sera la imagen que queremos codificar.
+        \item params (Vector). Son parámetros específicos para el formato. En nuestro caso, agregamos un vector para hacer cambio en la calidad de la imagen. La buena práctica para calcular el ELA es poner la calidad de la imagen al 90\%.
+    \end{itemize}     
+    \begin{lstlisting}[language=Python]
+    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
+    _, enc = cv2.imencode('.jpg', img_rgb, encode_param)
+    \end{lstlisting}
+    \item Decodificación de la imagen recompresionada
+
+    Se lee nuevamente la imagen JPEG generada, lo cual produce una versión recomprimida de la imagen original.
+    La función de decodificación recibe como parámetros lo siguiente:
+    \begin{itemize}
+        \item img (InputArray). Sera la imagen que queremos decodificar.
+        \item flag (Vector). Banderas para el modo de lectura. La bandera "1" significa que nos retornará una matriz en formato BGR.
+    \end{itemize}
+    Además, convertimos el output de la decodificación a RGB para poder calcular la diferencia.
+    \begin{lstlisting}[language=Python]
+    recompressed = cv2.cvtColor(cv2.imdecode(enc, 1), cv2.COLOR_BGR2RGB)
+    \end{lstlisting}
+    \item Cálculo de diferencias entre la imagen original y la recompresionada.
+    
+    En este paso conseguimos el ELA. Calculamos la diferencia absoluta pixel a pixel. Cuanto mayor sea la diferencia, mayor es el error introducido por la recompresión.
+    \begin{lstlisting}[language=Python]
+    diff = cv2.absdiff(img_rgb, recompressed)
+    \end{lstlisting}
+    \item Conversión a escala de grises para visualización del ELA
+
+    Finalmente, la imagen de diferencias se convierte a escala de grises, lo que simplifica la visualización de los niveles de error.
+    \begin{lstlisting}[language=Python]
+    gray = cv2.cvtColor(diff, cv2.COLOR_RGB2GRAY)
+    \end{lstlisting}
+\end{enumerate}
+
+\subsubsection{PRNU}
 
 
 \section{Resultados}
