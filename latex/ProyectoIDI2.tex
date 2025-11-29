@@ -2,6 +2,8 @@
 \documentclass[14pt]{article}
 \usepackage{amsmath}
 \usepackage{graphicx}
+\usepackage{float}
+\usepackage{listings}
 
 % Datos del documento
 \title{
@@ -52,8 +54,59 @@ A continuación, se describen las características forenses que se utilizarán e
         \item Captura textura local
         \item Es robusto a cambios de iluminación
     \end{itemize}
+    \item \textbf{ELA:}
+    \begin{itemize}
+        \item Detecta distribuciones irregulares de ruido.
+        \item Es usado para detectar ediciones en la imagen.
+    \end{itemize}
+    \item \textbf{PRNU:}
+    \begin{itemize}
+        \item Captura de la sensibilidad de luz en los diferentes pixeles.
+        \item Es una característica debido a errores en manufactura.
+        \item Está presente en todos los chips de sensores de imagen.
+    \end{itemize}
 \end{itemize}
 
+\subsection{Error Level Analysis (ELA)}
+El patrón ELA se calcula codificando la imagen completa con el estándar JPEG a un nivel de calidad conocido, constante y normalmente alto (un valor típico es del 95\%). Posteriormente, la imagen decodificada del flujo de bits JPEG se resta de la imagen original.
+$$
+ELA_{img}=img-JPEG^{-1}[JPEG(img,95\%)]
+$$
+En caso de que encontremos una imagen editada, un patrón irregular con diferentes intensidades se encontrará en la imagen.
+
+\subsection{Photo Response Non-Uniformity (PRNU)}
+PRNU es un tipo de ruido usado para la identificación de cámaras utilizadas para tomar una fotografía. Se utilizará este tipo de característica pensando en que las imágenes generadas por IA no muestren imperfecciones.
+El PRNU es ruido multiplicativo que responde a la siguiente ecuación:
+$$
+Im_{out}=(I_{ones} + Noise_{cam}).Im_{in}+Noise_{add}
+$$
+donde $Im_{in}$ es la imagen "real" presentada por al cámara, $I_{ones}$ es una matriz llena de unos, $Noise_{cam}$ es el patrón de ruido del sensor, y $Im_{out}$ es 
+la imagen final proporcionada por la cámara. El símbolo $.$ significa el producto punto de las matrices, y $Noise_{add}$ es ruido añadido por otras fuentes.
+
+El PRNU es calculado utilizando una imagen y realizando un proceso de reducción de ruido con $Im_{out}$ y calculando el residuo:
+$$
+W = Im_{out} - denoise(Im_{out})
+$$
+
+Existen varias formas de realizar el filtro de ruido. Nosotros utilizamos el wavelet denoising, este mismo tiene un proceso de umbralización el cual decide qé píxeles son "claros" y cuáles son "oscuros" comparándolos con un valor límite (umbral). Los píxeles por encima del umbral toman un valor (ej, blanco) y los demás toman otro (ej, negro).
+Por default, nosotros utilizamos el método de BayesShinrk para realizar la umbralización.
+A continuación se presenta una imagen que ejemplifica el proceso de BayesShrink:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=10cm]{../img/sphx_glr_plot_denoise_wavelet_001.png}
+    \caption{BayesShrink}
+    \label{fig:denoise}
+\end{figure}
+
+Asumiendo que $I_m=denoise(Im_out)$, dada una colección de imágenes de la misma cámara el patrón de PRNU(también conocido como la huella dactilar de la cámara) se puede estimar de la siguiente manera:
+$$
+F = \frac{\sum_{n=1}^NW^nIm_in^n}{\sum_{n=1}^N(Im_{in}^2)}
+$$
+
+En nuestro caso, siempre calcularemos el PRNU utilizando una imagen $(N=1)$. Por lo tanto, nuestra ecuación final es la siguiente:
+$$
+F = \frac{W}{Im_{in}}
+$$
 
 \subsection{Perceptrón Multicapa (MLP)}
 El MLP es una red neuronal compuesta por capas densas totalmente conectadas. En este trabajo se usa como clasificador final: recibe la concatenación del embedding de la CNN y el vector de características manuales, y aprende a asignar cada imagen en una de dos clases: real o generada por IA.
@@ -130,7 +183,68 @@ Para capturar artefactos y estadísticas sutiles introducidas por los modelos ge
 
 \begin{itemize}
     \item \textbf{PRNU} (\textit{Photo-Response Non-Uniformity}): Residuo de ruido intrínseco de la cámara, útil para identificar manipulaciones.
+
+    El proceso que realiza el código es el siguiente:
+    \begin{enumerate}
+        \item Reducción de ruido mediante Transformada wavelet
+
+        En esta etapa aplicamos un filtro de wavelet denoising a la imagen. Esto con el objetivo de estimar la componente estructural "limpia" de la imagen.
+        El sensor posee ruido propio, pero ese ruido queda principalmente en la image sin denoise. POr lo tanto, aplicar un suavizado wavelets obtenemos una aproximacion de contenido real sin ruido.
+        Para utilizar la función de denoising se utilizaron los parámetros siguientes:
+        \begin{itemize}
+            \item image (ndarray). Imagen a la que se le aplicara el denoising.
+            \item mode (soft,hard).  Es un parámetro opcional para mencionar cual es el tipo de denoising utilizado. La documentación comenta que utilizar "soft" regresa los mejores resultados, por lo tanto, nosotros utilizamos "soft".
+            \item convert2ybcr (bool). Convierte la imagen en YCbCr. Este parámetro se quedo en False porque queremos que nos regrese al imagen en RGB para compararlo con la imagen inicial.
+            \item method (BayesShrink, VIsuShrink). Son los métodos que se pueden utilizar para umbralización. Por default, se utilizó el BayesShrink.
+        \end{itemize}
+        \item Obtención del residual (ruido estimado del sensor)
+
+        Recordando la siguiente ecuación:
+        $$
+        W = Im_{out} - denoise(Im_{out})
+        $$
+        Aquí calculamos la W de la ecuación. Restamos la imagen sin ruido de la imagen original. El resultado es el residual, que contiene principalmente ruido de luminancia, ruido aleatorio, y especialmente el componente PRNU, que es el ruido fijo del sensor. Este residual es una aproximación del ruido característico que la cámara imprime siempre en sus fotos.
+        \item Estimamos PRNU
+        
+        Recordamos la siguiente ecuación:
+        $$
+        F = \frac{W}{Im_{in}}
+        $$
+        Finalmente, Dividimos el residual por la imagen para obtener una estimación del patrón PRNU. No se trata de una normalización, sino de la aplicación directa del modelo matemático que describe la relación entre el residual y el patrón de ruido del sensor.
+    \end{enumerate}
     \item \textbf{ELA} (\textit{Error Level Analysis}): Destaca diferencias en el nivel de compresión JPEG, indicando áreas de edición o falsificación.
+
+    EL proceso que realiza el código es el siguiente:
+
+    \begin{enumerate}
+        \item Conversión de formato de color
+        
+        La imagen cargada por OpenCV está en formato BGR, por lo que primero se convierte a RGB para trabajar en un espacio de color estándar.
+        \item Recompresión controlada en JPEG
+        
+        La imagen se vuelve a comprimir artificialmente utilizando un nivel de calidad definido. Esta recompresión introduce errores predecibles.
+        La función de codificación recibe como parámetros lo siguiente:
+        \begin{itemize}
+            \item ext (String). Es la extensión del archivo. Nosotros guardaremos en .jpg.
+            \item img (InputArray). Sera la imagen que queremos codificar.
+            \item params (Vector). Son parámetros específicos para el formato. En nuestro caso, agregamos un vector para hacer cambio en la calidad de la imagen. La buena práctica para calcular el ELA es poner la calidad de la imagen al 90\%.
+        \end{itemize}     
+        \item Decodificación de la imagen recompresionada
+
+        Se lee nuevamente la imagen JPEG generada, lo cual produce una versión recomprimida de la imagen original.
+        La función de decodificación recibe como parámetros lo siguiente:
+        \begin{itemize}
+            \item img (InputArray). Sera la imagen que queremos decodificar.
+            \item flag (Vector). Banderas para el modo de lectura. La bandera "1" significa que nos retornará una matriz en formato BGR.
+        \end{itemize}
+        Además, convertimos el output de la decodificación a RGB para poder calcular la diferencia.
+        \item Cálculo de diferencias entre la imagen original y la recompresionada.
+        
+        En este paso conseguimos el ELA. Calculamos la diferencia absoluta pixel a pixel. Cuanto mayor sea la diferencia, mayor es el error introducido por la recompresión.
+        \item Conversión a escala de grises para visualización del ELA
+
+        Finalmente, la imagen de diferencias se convierte a escala de grises, lo que simplifica la visualización de los niveles de error.
+    \end{enumerate}
     \item \textbf{Sobel}: Detector de bordes.
     \item \textbf{LBP} (\textit{Local Binary Patterns}): Descriptor de textura.
     \item \textbf{GLCM} (\textit{Gray-Level Co-Occurrence Matrix}): Estadísticas de textura.
@@ -226,7 +340,8 @@ El clasificador híbrido, que combina el \textit{embedding} de la CNN ResNet50 c
 \begin{table}[h]
 \centering
 \caption{Evaluación del Clasificador MLP Híbrido}
-\begin{tabular}{|l|c|l|}
+\resizebox{12cm}{!}{
+\begin{tabular}{|l|c|p{6cm}|}
 \hline
 \textbf{Métrica} & \textbf{Valor} & \textbf{Interpretación} \\
 \hline
@@ -236,6 +351,7 @@ AUC & $0.9929$ & Capacidad discriminativa excelente, muy cercana a la perfecció
 Tiempo de Predicción & $0.0846$ s & Extremadamente bajo, adecuado para inferencia en tiempo real con limitaciones en hardware. \\
 \hline
 \end{tabular}
+}
 \label{tab:resultados_mlp}
 \end{table}
 
@@ -256,7 +372,8 @@ El modelo ViT, basado en la arquitectura de \textit{transformers} pre-entrenada 
 \begin{table}[h]
 \centering
 \caption{Evaluación del Modelo ViT}
-\begin{tabular}{|l|c|l|}
+\resizebox{12cm}{!}{
+\begin{tabular}{|l|c|p{5cm}|}
 \hline
 \textbf{Métrica} & \textbf{Valor} & \textbf{Interpretación} \\
 \hline
@@ -266,6 +383,7 @@ AUC & $1.0000$ & Capacidad discriminativa perfecta. \\
 Tiempo de Predicción & $16.5798$ s & Alto costo computacional por la complejidad de la arquitectura de transformers. \\
 \hline
 \end{tabular}
+}
 \label{tab:resultados_vit}
 \end{table}
 
@@ -286,6 +404,7 @@ La tabla \ref{tab:comparativa} resume los \textit{trade-offs} entre los dos enfo
 \begin{table}[h]
 \centering
 \caption{Comparación de Desempeño y Eficiencia}
+\resizebox{12cm}{!}{
 \begin{tabular}{|l|c|c|}
 \hline
 \textbf{Característica} & \textbf{ViT (Vision Transformer)} & \textbf{Hybrid MLP (CNN + Características)} \\
@@ -295,6 +414,7 @@ Recall & $\mathbf{1.0000}$ & $0.9947$ \\
 Velocidad de Predicción & $16.58$ segundos & $\mathbf{0.08}$ segundos \\
 \hline
 \end{tabular}
+}
 \label{tab:comparativa}
 \end{table}
 
