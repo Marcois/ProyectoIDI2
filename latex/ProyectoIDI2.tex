@@ -1,6 +1,7 @@
 % Plantilla a utilizar
 \documentclass[14pt]{article}
-
+\usepackage{amsmath}
+\usepackage{graphicx}
 
 % Datos del documento
 \title{
@@ -22,23 +23,29 @@ Rodrigo Emmanuel Macias Pantoja
 \maketitle
 
 \section{Introducción}
-El rápido avance de los modelos generativos ha incrementado la necesidad de desarrollar sistemas capaces de detectar si una imagen fue creada por inteligencia artificial o capturada del mundo real. La facilidad con la que estas imágenes pueden manipular información visual plantea retos en ámbitos como la verificación digital, la seguridad, el periodismo y la prevención de desinformación.
+El rápido avance de los modelos generativos ha incrementado la necesidad de desarrollar sistemas capaces de detectar si una imagen fue creada por inteligencia artificial (IA) o capturada del mundo real. La facilidad con la que estas imágenes pueden manipular información visual plantea retos en ámbitos como la verificación digital, la seguridad, el periodismo y la prevención de desinformación.
 
-El presente trabajo tiene como objetivo desarrollar, entrenar y evaluar dos modelos distintos para la detección de imágenes generadas por IA, comparando su desempeño y seleccionando el mejor. El primer enfoque emplea un modelo híbrido que combina representaciones profundas extraídas con una CNN (embeddings CNN) junto con características diseñadas a mano (features handccrafted), las cuales se integran mediante un perceptrón multicapa (MLP). El segundo enfoque emplea un Vision Transformer (ViT) preentrenado, aprovechando técnicas modernas de transfer learning. La evaluación de los modelos se realizará utilizando y analizando métricas estándar de clasificación.
+El presente trabajo tiene como objetivo desarrollar, entrenar y evaluar dos modelos distintos para la detección de imágenes generadas por IA con el fin de comparar sus desempeños. El primer enfoque emplea un modelo híbrido que combina representaciones profundas extraídas con una CNN (embeddings CNN) junto con características diseñadas manualmente (features handccrafted), las cuales se integran mediante un perceptrón multicapa (MLP). El segundo enfoque emplea un Vision Transformer (ViT) preentrenado, aprovechando técnicas modernas de transfer learning. La evaluación de los modelos se realizará utilizando y analizando métricas estándar de clasificación.
 
 
 \section{Marco Teórico}
 
 \subsection{Detección de imágenes generadas por IA}
-La detección de imágenes sintéticas busca identificar patrones sutiles introducidos por modelos generativos. Aunque estas imágenes pueden verse realistas al ojo humano, suelen contener artefactos estadísticos o estructurales que pueden ser detectados mediante técnicas de visión computacional. Los métodos de detección pueden utilizar características manuales, modelos de aprendizaje profundo o enfoques híbridos.
+La detección de imágenes sintéticas busca identificar patrones sutiles introducidos por modelos generativos. Aunque estas imágenes puedan parecer realistas al ojo humano, suelen contener artefactos estadísticos o estructurales que pueden ser detectados mediante técnicas de visión computacional. Los métodos de detección pueden utilizar características obtenidas manualmente, modelos de aprendizaje profundo o enfoques híbridos.
+
 
 \subsection{Redes Neuronales Convolucionales (CNN)}
-Una CNN es un tipo de red neuronal diseñada para procesar datos con estructura espacial, como imágenes. Sus capas convolucionales aprenden filtros que detectan bordes, texturas y patrones complejos. Las CNN suelen emplearse como extractores de características: en lugar de entrenarlas desde cero, se utilizan sus capas finales para obtener un embedding o vector que representa el contenido visual (por ejemplo, uno de 512 dimensiones). Este embedding puede luego combinarse con otros descriptores para entrenar un clasificador adicional.
+Una CNN es un tipo de red neuronal diseñada para procesar datos con estructura espacial, como imágenes. Sus capas convolucionales aprenden filtros que detectan bordes, texturas y patrones complejos. 
+
+Las CNN suelen emplearse como extractores de características: en lugar de entrenarlas desde cero, se utilizan sus capas finales para obtener un embedding o vector que representa el contenido visual. Por ejemplo, en la implementación se utiliza ResNet50, que procude un embedding de 2040 dimensiones. Este embedding puede luego combinarse con otros descriptores para entrenar un clasificador adicional.
+
+El modelo seleccionado, ResNet50, es una Red Neuronal Convolucional (CNN) entrenada en un conjunto de aproximadamente 1 millón de imágenes y 1,000 clases diferentes (ImageNet-1k).
+
 
 \subsection{Handcrafted features}
-Las características diseñadas a mano consisten en descriptores creados manualmente, basados en intuiciones o propiedades estadísticas de la imagen. Ejemplos comunes incluyen Histogram of Oriented Gradients (HOG), Local Binary Patterns (LBP), o métricas de ruido. En la detección de contenido sintético, estas características pueden capturar irregularidades que no siempre son evidentes para un modelo profundo por sí solo. Su combinación con embeddings de CNN permite crear modelos híbridos que integran conocimiento explícito con aprendizaje profundo.
+Las características diseñadas a mano consisten en descriptores creados manualmente basados en intuiciones o propiedades estadísticas de la imagen. Ejemplos comunes de características forenses incluyen Photo Response Non-Uniformity (PRNU), Local Binary Patterns (LBP), o métricas de ruido. En la detección de contenido sintético, estas características pueden capturar irregularidades que mejoren el desempeño que tendría un modelo profundo por sí solo. Su combinación con embeddings de CNN permite crear modelos híbridos que integran conocimiento explícito con aprendizaje profundo.
 
-A continuación, se describen las características diseñadas que se utilizarán en el modelo híbrido:
+A continuación, se describen las características forenses que se utilizarán en el modelo híbrido:
 \begin{itemize}
     \item \textbf{LBP:}
     \begin{itemize}
@@ -47,28 +54,252 @@ A continuación, se describen las características diseñadas que se utilizarán
     \end{itemize}
 \end{itemize}
 
+
 \subsection{Perceptrón Multicapa (MLP)}
-El MLP es una red neuronal totalmente conectada compuesta por capas densas. En este trabajo se usa como clasificador final: recibe la concatenación del embedding de la CNN y el vector de características manuales, y aprende una función que asigna cada imagen a una de dos clases: real o generada por IA. Arquitecturas típicas incluyen capas como 256 → 64 → 1 con activaciones ReLU y salida sigmoidal para clasificación binaria.
+El MLP es una red neuronal compuesta por capas densas totalmente conectadas. En este trabajo se usa como clasificador final: recibe la concatenación del embedding de la CNN y el vector de características manuales, y aprende a asignar cada imagen en una de dos clases: real o generada por IA.
+
 
 \subsection{Vision Transformer (ViT)}
-Los Vision Transformers son una arquitectura basada en transformers, originalmente diseñada para texto, pero adaptada para imágenes dividiéndolas en pequeños parches que funcionan como “tokens”. El ViT aprende relaciones globales entre estos parches mediante mecanismos de self-attention.
+Los Vision Transformers son una arquitectura basada en transformers, originalmente diseñada para texto, pero adaptada para imágenes dividiéndolas en pequeños parches que funcionan como “tokens”. El ViT aprende relaciones globales entre estos parches mediante mecanismos de atención.
 
-El modelo seleccionado, google/vit-base-patch16-224-in21k, es un ViT entrenado en un conjunto de más de 14 millones de imágenes (ImageNet-21k). Mediante transfer learning, se ajustan sus pesos para la tarea específica de detección de imágenes generadas por IA, permitiendo obtener resultados robustos incluso con conjuntos de datos limitados.
+El modelo seleccionado, google/vit-base-patch16-224-in21k, es un ViT entrenado en un conjunto de más de 14 millones de imágenes y 21,841 clases diferentes (ImageNet-21k).
+
 
 \subsection{Transfer learning}
 El transfer learning consiste en reutilizar modelos ya entrenados en tareas generales para resolver tareas nuevas con menos datos y menor tiempo de entrenamiento. En visión computacional, esto es común con CNNs o ViTs preentrenados: se aprovecha el conocimiento previo del modelo (capacidad para detectar formas, texturas y estructuras) y solo se ajustan sus capas finales. Esto mejora el desempeño y evita tener que entrenar desde cero.
 
 
-\section{Metodología}
-ToDo
+\subsection{Full Fine-Tuning}
+El \textit{Full Fine-Tuning} (ajuste fino completo) es la estrategia de \textit{Transfer Learning} utilizada en este trabajo. Consiste en tomar un modelo pre-entrenado (como el ViT) y ajustar los pesos de \textbf{todas sus capas} (no solo las finales) durante el entrenamiento en la tarea específica de detección de imágenes sintéticas.
 
+Se elige esta estrategia porque, si bien las capas iniciales de ViT ya han aprendido características generales, la detección de imágenes sintéticas a menudo depende de artefactos muy sutiles y de baja frecuencia. Permitir que los gradientes fluyan y modifiquen todas las capas hace que el modelo sea capaz de adaptar sus filtros iniciales específicamente para capturar estos artefactos específicos de los modelos generativos, logrando un mejor desempeño que si solo se ajustaran las capas finales.
+
+
+\subsection{Optimizador Adam}
+El \textit{Optimizador Adam} (Adaptive Moment Estimation) es un algoritmo de optimización popular y eficiente utilizado para ajustar los pesos de la red neuronal durante el entrenamiento.
+
+\begin{itemize}
+    \item Adam utiliza estimaciones del primer momento (la media de los gradientes) y del segundo momento (la varianza de los gradientes) de las pendientes. Esto permite que el algoritmo \textbf{calcule tasas de aprendizaje adaptativas e individuales} para cada parámetro, asegurando una convergencia rápida y estable.
+    \item Adam es el optimizador por defecto en muchos modelos de aprendizaje profundo debido a su robustez y eficiencia en una amplia variedad de problemas, incluidas las tareas de visión con grandes modelos como ViT.
+\end{itemize}
+
+
+\subsection{BCEWithLogitsLoss}
+\textit{BCEWithLogitsLoss} (Binary Cross-Entropy with Logits Loss) es la función de pérdida utilizada en este trabajo, siendo la elección estándar para la \textbf{clasificación binaria} (Real vs. Generada por IA).
+
+Esta función combina dos pasos cruciales en una sola operación computacionalmente más estable:
+\begin{enumerate}
+    \item Recibe los \textit{logits} ($\hat{y}$), que son la salida directa, sin procesar, de la capa final de la red neuronal.
+    \item Aplica internamente la función de activación Sigmoid y la fórmula de la \textit{BCE} (Binary Cross Entropy) contra la etiqueta real ($y$). Esto resulta en un cálculo numérico más estable que aplicar la Sigmoid y BCE por separado. Al operar directamente sobre los \textit{logits}, evita problemas comunes como el \textit{overflow} o \textit{underflow} que pueden ocurrir al calcular logaritmos de valores cercanos a cero después de una Sigmoid.
+\end{enumerate}
+
+
+\subsection{Métricas de Evaluación}
+La evaluación del desempeño se realiza utilizando métricas específicas de clasificación que son cruciales para entender el rendimiento de un clasificador binario.
+
+\subsubsection*{Recall (Sensibilidad)}
+El \textit{Recall} mide la capacidad del modelo para identificar correctamente \textbf{todas las instancias positivas reales}. Se calcula como:
+$$
+\text{Recall} = \frac{\text{Verdaderos Positivos (VP)}}{\text{Verdaderos Positivos (VP)} + \text{Falsos Negativos (FN)}}
+$$
+En la detección de imágenes sintéticas, el \textit{Recall} es fundamental. Un \textbf{Falso Negativo (FN)} significa que una imagen generada por IA fue clasificada erróneamente como real. Priorizar el \textit{Recall} asegura que la mayoría de las imágenes fraudulentas sean detectadas, minimizando el riesgo en seguridad o desinformación.
+
+\subsubsection*{F1-Score (Puntuación F1)}
+El \textit{F1-Score} es la \textbf{media armónica} de la \textit{Precision} y el \textit{Recall}. Proporciona un equilibrio entre identificar correctamente las instancias positivas (Recall) y evitar clasificar erróneamente las instancias negativas como positivas (Precision).
+$$
+\text{F1} = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}
+$$
+Una puntuación F1 alta indica que el modelo es robusto, ya que esto no se podría lograr con una precisión baja y un \textit{recall} alto (o viceversa). Es una métrica de \textbf{resumen general} que confirma que el modelo no está sobrecompensando en ninguna de las dos métricas.
+
+\subsubsection*{ROC-AUC (Area Under the Receiver Operating Characteristic Curve)}
+El \textit{ROC-AUC} mide la capacidad del modelo para distinguir entre clases. Es insensible al desequilibrio de clases y proporciona una visión integral del rendimiento del modelo, independientemente de dónde se establezca el umbral de decisión final. Una puntuación alta (cercana a 1.0) confirma la \textbf{capacidad discriminativa} intrínseca del modelo.
+
+
+\section{Metodología}
+\subsection{Procesamiento de Datos}
+
+El desarrollo se enfoca en la preparación del conjunto de datos inicial para generar las representaciones que serán utilizadas por el modelo \textbf{MLP Híbrido}
+
+El procesamiento se centró en la uniformidad de las imágenes y la extracción del vector de características híbrido y del embedding de la CNN.
+
+\subsubsection*{1. Preprocesamiento de Imágenes}
+Todas las imágenes del conjunto de datos fueron preprocesadas y normalizadas a una resolución fija de 224x224 píxeles. Adicionalmente, se obtuvo la versión en escala de grises para el cálculo de ciertas características forenses.
+
+\subsubsection*{2. Extracción de Características Manuales (\texttt{handcrafted features})}
+Para capturar artefactos y estadísticas sutiles introducidas por los modelos generativos, se implementó un extractor de características manuales. Este vector final de \textbf{58 dimensiones} se construye a partir de la concatenación de las siguientes técnicas forenses:
+
+\begin{itemize}
+    \item \textbf{PRNU} (\textit{Photo-Response Non-Uniformity}): Residuo de ruido intrínseco de la cámara, útil para identificar manipulaciones.
+    \item \textbf{ELA} (\textit{Error Level Analysis}): Destaca diferencias en el nivel de compresión JPEG, indicando áreas de edición o falsificación.
+    \item \textbf{Sobel}: Detector de bordes.
+    \item \textbf{LBP} (\textit{Local Binary Patterns}): Descriptor de textura.
+    \item \textbf{GLCM} (\textit{Gray-Level Co-Occurrence Matrix}): Estadísticas de textura.
+    \item \textbf{FFT} (\textit{Fast Fourier Transform}): Análisis del dominio de la frecuencia, útil para detectar patrones de generación.
+    \item \textbf{Color Stats}: Estadísticas básicas del espacio de color.
+\end{itemize}
+
+\subsubsection*{3. Extracción de Embeddings CNN (ResNet50)}
+En paralelo, se utilizó una CNN basada en el modelo ResNet50 pre-entrenado en ImageNet-1k, para extraer un vector de \textbf{2048 dimensiones} (el embedding) por imagen. Este vector actúa como una representación de alto nivel del contenido visual.
+
+\subsubsection*{4. Estandarización y Vector Híbrido}
+Los vectores de características manuales fueron estandarizados para asegurar que cada característica contribuya de manera equitativa al entrenamiento. Finalmente, las características manuales y el embedding CNN se concatenaron para formar el \textbf{vector de características híbrido}  de 2106 dimensiones que alimenta al clasificador MLP.
+
+\subsection{División de Datos}
+
+La división de los datos se realizó para garantizar conjuntos de entrenamiento, prueba y validación distintos, esenciales para evaluar la generalización del modelo. El conjunto de datos inicial tiene un \textbf{balanceo de clases equilibrado} (50\% reales, 50\% IA). Se empleó una división estratificada para asegurar que la proporción de imágenes reales y sintéticas fuera constante en todos los conjuntos.
+
+\begin{itemize}
+    \item \textbf{División Principal (70\% / 30\%):} El conjunto de datos inicial se dividió en entrenamiento (70\%) y un conjunto temporal (30\%) manteniendo el equilibro de clases.
+    \item \textbf{División Secundaria (15\% / 15\%):} El conjunto temporal (30\%) se dividió equitativamente para obtener los conjuntos de prueba (Test, 15\%) y validación (Validation, 15\%).
+\end{itemize}
+
+Esta estrategia resultó en los siguientes conjuntos de datos finales, guardados en archivos \texttt{.csv} separados:
+
+\subsubsection*{Datasets para el Modelo Híbrido (MLP Híbrido)}
+Estos conjuntos contienen el vector de características híbrido y sus etiquetas (real e IA):
+\begin{itemize}
+    \item \texttt{hybrid\_train.csv} (70\%)
+    \item \texttt{hybrid\_test.csv} (15\%)
+    \item \texttt{hybrid\_val.csv} (15\%)
+\end{itemize}
+
+\subsubsection*{Datasets para el Modelo ViT}
+Dado que el modelo ViT realiza su propia extracción de características a partir de la imagen cruda, estos conjuntos solo contienen las rutas de las imágenes y las etiquetas, sin las características manuales ni los embeddings:
+\begin{itemize}
+    \item \texttt{vit\_train.csv} (70\%)
+    \item \texttt{vit\_test.csv} (15\%)
+    \item \texttt{vit\_val.csv} (15\%)
+\end{itemize}
+
+
+\subsection{Entrenamiento de los Modelos}
+El proceso de entrenamiento se ejecutó de forma independiente para el \textbf{Clasificador MLP Híbrido)} y el \textbf{Vision Transformer (ViT)}, utilizando los conjuntos de datos de entrenamiento y prueba generados previamente.
+
+\subsubsection*{Configuraciones Generales de Entrenamiento}
+\begin{itemize}
+    \item \textbf{Optimizador:} Se empleó \textbf{Adam} en ambos modelos, ajustando los pesos de la red de manera adaptativa.
+    \item \textbf{Función de Pérdida:} \textbf{BCEWithLogitsLoss} fue la función de pérdida elegida para la clasificación binaria, garantizando estabilidad numérica al operar directamente sobre los \textit{logits} de la capa de salida.
+    \item \textbf{Criterio de mejor modelo:} Se guardaron los modelos con el mejor desempeño en la métrica \textit{Recall} sobre el conjunto de prueba.
+\end{itemize}
+
+\subsubsection{Entrenamiento del Clasificador MLP Híbrido}
+
+El modelo \textbf{MLP Híbrido} es una red de tres capas densas, diseñada para recibir como entrada la concatenación del embedding CNN y las características manuales, un \textbf{vector de características híbrido}  de 2106 dimensiones.
+
+\begin{itemize}
+    \item \textbf{Arquitectura:} La red sigue un diseño con dos capas ocultas o intermedias, aplicando regularización en cada una.
+    \item \textbf{Hiperparámetros:}
+    \begin{itemize}
+        \item \textbf{Neuronas primer capa oculta:} 256
+        \item \textbf{Neuronas segunda capa oculta} 64
+        \item \textbf{Épocas:} 50
+        \item \textbf{Tamaño del Lote (\textit{Batch Size}):} 16
+        \item \textbf{Tasa de Aprendizaje (\textit{Learning Rate}):} $1 \times 10^{-4}$
+    \end{itemize}
+\end{itemize}
+
+El entrenamiento gestionó la iteración manual sobre los lotes de datos, la propagación hacia adelante, el cálculo de la pérdida, la retropropagación y la actualización de pesos.
+
+\subsubsection{Entrenamiento del Vision Transformer (ViT)}
+
+El entrenamiento del ViT se basó en el proceso de \textbf{Full Fine-Tuning} del modelo pre-entrenado \texttt{google/vit-base-patch16-224-in21k}.
+
+\begin{itemize}
+    \item \textbf{Procesamiento de Imágenes:} Se utiliza la extracción de características del propio modelo ViT, este componente se encarga de aplicar automáticamente el reescalado, la normalización y el formato tensorial adecuado a partir de la imagen cruda para la entrada al modelo ViT.
+    \item \textbf{Full Fine-Tuning:} Se ajustaron los pesos de \textbf{todas las capas} del modelo ViT, incluyendo la gran mayoría de sus $\approx 86$ millones de parámetros, permitiendo que la red se especialice en los sutiles patrones de las imágenes sintéticas.
+    \item \textbf{Hiperparámetros:}
+    \begin{itemize}
+        \item \textbf{Épocas:} 5
+        \item \textbf{Tamaño del Lote (\textit{Batch Size}):} 16
+        \item \textbf{Tasa de Aprendizaje (\textit{Learning Rate}):} $2 \times 10^{-5}$
+    \end{itemize}
+\end{itemize}
 
 \section{Resultados}
-ToDo+
+\addcontentsline{toc}{section}{Resultados y Evaluación del Desempeño}
+
+Se presenta el desempeño del \textbf{Modelo MLP Híbrido)} y el \textbf{Modelo ViT (google/vit-base-patch16-224-in21k)} sobre el conjunto de datos de validación en la tarea de detección de imágenes sintéticas utilizando métricas como el Recall, F1-Score y AUC.
+
+\subsection{Clasificador MLP Híbrido}
+El clasificador híbrido, que combina el \textit{embedding} de la CNN ResNet50 con características manuales, mostró un excelente desempeño caracterizado por su alta velocidad.
+
+\begin{table}[h]
+\centering
+\caption{Evaluación del Clasificador MLP Híbrido}
+\begin{tabular}{|l|c|l|}
+\hline
+\textbf{Métrica} & \textbf{Valor} & \textbf{Interpretación} \\
+\hline
+Recall & $0.9947$ & Identificó correctamente el 99.47\% de las imágenes sintéticas. \\
+F1-score & $0.9664$ & Muy buen equilibrio entre \textit{Precisión} y \textit{Recall}. \\
+AUC & $0.9929$ & Capacidad discriminativa excelente, muy cercana a la perfección. \\
+Tiempo de Predicción & $0.0846$ s & Extremadamente bajo, adecuado para inferencia en tiempo real con limitaciones en hardware. \\
+\hline
+\end{tabular}
+\label{tab:resultados_mlp}
+\end{table}
+
+\subsubsection*{Análisis de la Curva ROC AUC (MLP Híbrido)}
+La curva ROC para el clasificador híbrido (Figura \ref{fig:roc_hybrid}) también demuestra una capacidad de clasificación excepcional con un AUC de $0.9929$. La curva está fuertemente pegada a la esquina superior izquierda, confirmando su capacidad discriminativa robusta a través de todos los umbrales de decisión.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.8\textwidth]{../results/Hybrid MLP_roc_curve.png}
+    \caption{Curva ROC AUC del Clasificador MLP Híbrido.}
+    \label{fig:roc_hybrid}
+\end{figure}
+
+
+\subsection{Modelo Vision Transformer (ViT)}
+El modelo ViT, basado en la arquitectura de \textit{transformers} pre-entrenada en ImageNet-21k, demostró un desempeño \textbf{cercano a la perfección} en las métricas de clasificación.
+
+\begin{table}[h]
+\centering
+\caption{Evaluación del Modelo ViT}
+\begin{tabular}{|l|c|l|}
+\hline
+\textbf{Métrica} & \textbf{Valor} & \textbf{Interpretación} \\
+\hline
+Recall & $1.0000$ & Identificó correctamente el 100\% de las imágenes sintéticas. \\
+F1-score & $0.9888$ & Excelente equilibrio entre \textit{Precisión} y \textit{Recall}. \\
+AUC & $1.0000$ & Capacidad discriminativa perfecta. \\
+Tiempo de Predicción & $16.5798$ s & Alto costo computacional por la complejidad de la arquitectura de transformers. \\
+\hline
+\end{tabular}
+\label{tab:resultados_vit}
+\end{table}
+
+\subsubsection*{Análisis de la Curva ROC AUC (ViT)}
+La curva ROC para el modelo ViT (Figura \ref{fig:roc_vit}) confirma su capacidad discriminativa, alcanzando un Área Bajo la Curva (AUC) de $1.0000$. La curva se eleva de manera inmediata, indicando una Tasa de Verdaderos Positivos del 100\% con una Tasa de Falsos Positivos casi nula, demostrando una separación ideal entre las clases.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\textwidth]{../results/ViT_roc_curve.png}
+    \caption{Curva ROC AUC del modelo Vision Transformer (ViT).}
+    \label{fig:roc_vit}
+\end{figure}
 
 
 \section{Conclusiones}
-ToDo
+La tabla \ref{tab:comparativa} resume los \textit{trade-offs} entre los dos enfoques evaluados.
+
+\begin{table}[h]
+\centering
+\caption{Comparación de Desempeño y Eficiencia}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Característica} & \textbf{ViT (Vision Transformer)} & \textbf{Hybrid MLP (CNN + Características)} \\
+\hline
+Efectividad Máxima (AUC) & $\mathbf{1.0000}$ & $0.9929$ \\
+Recall & $\mathbf{1.0000}$ & $0.9947$ \\
+Velocidad de Predicción & $16.58$ segundos & $\mathbf{0.08}$ segundos \\
+\hline
+\end{tabular}
+\label{tab:comparativa}
+\end{table}
+
+El ViT demostró ser marginalmente superior en precisión absoluta (Recall de $1.0000$), siendo ideal para aplicaciones críticas donde la minimización de Falsos Negativos es la prioridad absoluta. Sin embargo, el Hybrid MLP es \textbf{más de 200 veces más rápido} en el tiempo de predicción, ofreciendo una solución de alto rendimiento y eficiencia computacional. La alta efectividad de ambos modelos sugiere que tanto los \textit{features} extraídos por *transformers* como la combinación de descriptores convolucionales y manuales son metodologías robustas para la detección de imágenes sintéticas.
+
 
 
 \section*{Referencias}
