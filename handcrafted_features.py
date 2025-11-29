@@ -29,7 +29,7 @@ def extract_ela(img_bgr, quality=90):
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
     _, enc = cv2.imencode('.jpg', img_rgb, encode_param)
-    recompressed = cv2.imdecode(enc, 1)
+    recompressed = cv2.cvtColor(cv2.imdecode(enc, 1), cv2.COLOR_BGR2RGB)
     diff = cv2.absdiff(img_rgb, recompressed)
     gray = cv2.cvtColor(diff, cv2.COLOR_RGB2GRAY)
     return np.array([
