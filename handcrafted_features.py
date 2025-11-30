@@ -14,13 +14,14 @@ from skimage.restoration import denoise_wavelet
 def extract_prnu(img_gray):
     denoised = denoise_wavelet(img_gray, convert2ycbcr=False, mode='soft')
     residual = img_gray - denoised
-    prnu = residual / prnu
+    epsilon = 1e-8
+    prnu = residual / (img_gray.astype(np.float32) + epsilon)
     return np.array([
-        np.mean(residual),
-        np.std(residual),
-        np.var(residual),
-        np.mean(np.abs(residual)),
-        np.median(residual),
+        np.mean(prnu),
+        np.std(prnu),
+        np.var(prnu),
+        np.mean(np.abs(prnu)),
+        np.median(prnu),
     ])
 
 # ELA
