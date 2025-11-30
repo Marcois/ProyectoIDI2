@@ -1,0 +1,106 @@
+\section{Filtro Sobel: Detección de Bordes Basada en Gradientes}
+
+\subsection{Introducción}
+El filtro Sobel es un operador ampliamente utilizado en procesamiento de imágenes y visión por computadora para la \textbf{detección de bordes}. Se basa en calcular los cambios bruscos de intensidad en una imagen, lo que equivale a identificar los puntos donde la primera derivada presenta variaciones significativas. Estos bordes representan límites de objetos y estructuras internas, por lo que constituyen información esencial para la extracción de características y el reconocimiento de patrones.
+
+\subsection{Fundamentos matemáticos y algorítmicos}
+El filtro Sobel aplica dos núcleos de convolución de tamaño $3 \times 3$, uno orientado en la dirección horizontal ($G_x$) y otro en la vertical ($G_y$). Cada núcleo se desliza sobre la imagen multiplicando y sumando los valores de los píxeles vecinos, generando dos imágenes intermedias: una con gradientes horizontales y otra con gradientes verticales.
+
+La magnitud del gradiente se calcula como:
+
+\[
+M(x,y) = \sqrt{G_x(x,y)^2 + G_y(x,y)^2}
+\]
+
+o mediante una aproximación más simple:
+
+\[
+M(x,y) \approx |G_x(x,y)| + |G_y(x,y)|
+\]
+
+La dirección del borde se obtiene con:
+
+\[
+\phi(x,y) = \arctan\left(\frac{G_y(x,y)}{G_x(x,y)}\right)
+\]
+
+Los núcleos Sobel son separables, lo que permite realizar la convolución en dos pasos (filas y columnas), aumentando la eficiencia computacional. 
+
+\subsection{Relevancia para la Detección de Imágenes IA}
+El filtro Sobel permite capturar la estructura de los bordes en una imagen. En imágenes reales, los bordes suelen estar afectados por condiciones físicas de captura (ruido, iluminación desigual, limitaciones del sensor). En imágenes generadas por IA, los bordes tienden a ser más uniformes, definidos y libres de imperfecciones. Por ello, las métricas derivadas del Sobel (media y desviación estándar de la magnitud del gradiente) pueden servir como indicadores para distinguir entre imágenes auténticas y sintéticas.
+
+% -------------------------------------------------------------
+
+\section{Histogramas}
+
+\subsection{Introducción}
+El histograma de una imagen es una representación gráfica que muestra la distribución de intensidades de píxeles. En visión por computadora, esta herramienta no solo describe el contraste y el brillo, sino que también puede funcionar como un \textbf{descriptor estadístico} que captura la huella tonal de una imagen. Esta huella puede ser utilizada como feature para distinguir entre imágenes naturales y aquellas generadas artificialmente por modelos de inteligencia artificial.
+
+\subsection{Principio del Histograma}
+Un histograma se construye dividiendo el rango de intensidades (0--255 en imágenes de 8 bits) en intervalos o \textit{bins}, y contabilizando la proporción de píxeles que caen en cada intervalo. La forma del histograma refleja:
+\begin{itemize}
+    \item \textbf{Contraste}: amplitud de la distribución.
+    \item \textbf{Brillo}: desplazamiento hacia valores bajos (oscuros) o altos (claros).
+    \item \textbf{Tonalidad global}: presencia de picos o distribuciones uniformes.
+\end{itemize}
+
+\subsection{Relevancia para la Detección de Imágenes IA}
+El uso del histograma como feature permite capturar patrones característicos de imágenes generadas por IA:
+\begin{itemize}
+    \item \textbf{Distribuciones anómalas}: las imágenes sintéticas suelen mostrar histogramas más uniformes o con picos artificiales.
+    \item \textbf{Ausencia de ruido natural}: los histogramas de imágenes reales presentan irregularidades por ruido de captura, mientras que los de IA tienden a ser más suaves.
+    \item \textbf{Cobertura tonal}: las imágenes generadas pueden ocupar rangos completos de manera artificial, mientras que las reales suelen estar limitadas por condiciones de iluminación.
+\end{itemize}
+
+% -------------------------------------------------------------
+
+\section{Haralick/GLCM}
+
+\subsection{Introducción}
+La propuesta de Haralick se basa en la \textit{Gray-Level Co-occurrence Matrix} (GLCM), que cuantifica la frecuencia con la que aparecen juntos pares de intensidades de gris en una imagen, considerando una distancia y dirección específicas. A partir de esta matriz se derivan múltiples descriptores estadísticos que capturan la textura de la imagen.
+
+Las características tradicionales dependen del número de niveles de gris utilizados en la cuantización, lo que afecta la reproducibilidad. La redefinición de la GLCM como una función de densidad de probabilidad discretizada permite obtener características invariantes a la cuantización, garantizando consistencia en distintos escenarios.
+
+\subsection{Características típicas de Haralick}
+\begin{itemize}
+    \item \textbf{Contraste}: mide la diferencia de intensidad entre píxeles vecinos. Valores altos indican texturas con cambios bruscos; valores bajos indican superficies suaves.
+    \item \textbf{Homogeneidad}: evalúa la uniformidad de la textura. Valores altos reflejan texturas regulares; valores bajos reflejan variaciones abruptas.
+    \item \textbf{Energía}: mide la repetitividad de patrones en la textura. Valores altos indican patrones definidos; valores bajos indican texturas aleatorias.
+    \item \textbf{Correlación}: mide la dependencia lineal entre intensidades de píxeles vecinos. Valores altos indican relación tonal; valores bajos reflejan independencia.
+\end{itemize}
+
+\subsection{Relevancia para la Detección de Imágenes IA}
+Las texturas en imágenes reales suelen presentar irregularidades derivadas de materiales, iluminación y ruido del sensor. En imágenes IA, las texturas tienden a ser más uniformes o artificialmente repetitivas. Por ello, las características de Haralick permiten identificar patrones texturales sospechosos que pueden indicar generación sintética.
+
+% -------------------------------------------------------------
+
+\section{Estadísticas Básicas de Intensidad}
+
+\subsection{Introducción}
+Las estadísticas básicas de intensidad son medidas simples que resumen las propiedades globales de una imagen. Aunque no capturan información espacial ni textural, ofrecen una descripción cuantitativa del brillo y contraste general, así como del rango dinámico de los valores de píxel. Su simplicidad y bajo costo computacional las convierten en un recurso útil en pipelines de clasificación y análisis forense de imágenes.
+
+\subsection{Principio}
+Se calculan directamente sobre los valores de intensidad de los píxeles:
+\begin{itemize}
+    \item \textbf{Media ($\mu$)}: indica el nivel de brillo promedio de la imagen.
+    \item \textbf{Desviación estándar ($\sigma$)}: mide la variabilidad de intensidades, reflejando el contraste.
+    \item \textbf{Mínimo y máximo}: definen el rango dinámico, es decir, los valores más oscuros y más claros presentes.
+\end{itemize}
+
+Formalmente:
+
+\[
+\mu = \frac{1}{N} \sum_{i=1}^{N} I_i, \quad
+\sigma = \sqrt{\frac{1}{N} \sum_{i=1}^{N} (I_i - \mu)^2}
+\]
+
+donde $I_i$ es la intensidad del píxel y $N$ el número total de píxeles.
+
+\subsection{Relevancia para la Detección de Imágenes IA}
+Estas estadísticas aportan señales clave para distinguir imágenes reales de aquellas generadas por IA:
+\begin{itemize}
+    \item \textbf{Media de intensidad}: en imágenes reales depende de condiciones físicas de iluminación y sensores; en imágenes IA puede estar artificialmente balanceada.
+    \item \textbf{Desviación estándar}: en imágenes reales refleja variabilidad natural; en IA puede ser más homogénea o exagerada.
+    \item \textbf{Mínimo y máximo}: en imágenes reales existen limitaciones físicas (ruido, saturación); en IA suelen cubrir rangos completos de manera limpia.
+    \item \textbf{Indicadores de anomalía}: distribuciones demasiado uniformes o rangos dinámicos “perfectos” pueden ser evidencia de generación sintética.
+\end{itemize}

@@ -14,12 +14,14 @@ from skimage.restoration import denoise_wavelet
 def extract_prnu(img_gray):
     denoised = denoise_wavelet(img_gray, convert2ycbcr=False, mode='soft')
     residual = img_gray - denoised
+    epsilon = 1e-8
+    prnu = residual / (img_gray.astype(np.float32) + epsilon)
     return np.array([
-        np.mean(residual),
-        np.std(residual),
-        np.var(residual),
-        np.mean(np.abs(residual)),
-        np.median(residual),
+        np.mean(prnu),
+        np.std(prnu),
+        np.var(prnu),
+        np.mean(np.abs(prnu)),
+        np.median(prnu),
     ])
 
 # ELA
@@ -28,7 +30,7 @@ def extract_ela(img_bgr, quality=90):
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), quality]
     _, enc = cv2.imencode('.jpg', img_rgb, encode_param)
-    recompressed = cv2.imdecode(enc, 1)
+    recompressed = cv2.cvtColor(cv2.imdecode(enc, 1), cv2.COLOR_BGR2RGB)
     diff = cv2.absdiff(img_rgb, recompressed)
     gray = cv2.cvtColor(diff, cv2.COLOR_RGB2GRAY)
     return np.array([
