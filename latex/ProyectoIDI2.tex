@@ -4,6 +4,7 @@
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage{listings}
+\usepackage[hyphens]{url}
 
 \renewcommand{\refname}{} %se uso para quitar references
 
@@ -39,14 +40,6 @@ El presente trabajo tiene como objetivo desarrollar, entrenar y evaluar dos mode
 La detección de imágenes sintéticas busca identificar patrones sutiles introducidos por modelos generativos. Aunque estas imágenes puedan parecer realistas al ojo humano, suelen contener artefactos estadísticos o estructurales que pueden ser detectados mediante técnicas de visión computacional. Los métodos de detección pueden utilizar características obtenidas manualmente, modelos de aprendizaje profundo o enfoques híbridos.
 
 
-\subsection{Redes Neuronales Convolucionales (CNN)}
-Una CNN es un tipo de red neuronal diseñada para procesar datos con estructura espacial, como imágenes. Sus capas convolucionales aprenden filtros que detectan bordes, texturas y patrones complejos. 
-
-Las CNN suelen emplearse como extractores de características: en lugar de entrenarlas desde cero, se utilizan sus capas finales para obtener un embedding o vector que representa el contenido visual. Por ejemplo, en la implementación se utiliza ResNet50, que procude un embedding de 2040 dimensiones. Este embedding puede luego combinarse con otros descriptores para entrenar un clasificador adicional.
-
-El modelo seleccionado, ResNet50, es una Red Neuronal Convolucional (CNN) entrenada en un conjunto de aproximadamente 1 millón de imágenes y 1,000 clases diferentes (ImageNet-1k).
-
-
 \subsection{Handcrafted features}
 Las características diseñadas a mano consisten en descriptores creados manualmente basados en intuiciones o propiedades estadísticas de la imagen. Ejemplos comunes de características forenses incluyen Photo Response Non-Uniformity (PRNU), Local Binary Patterns (LBP), o métricas de ruido. En la detección de contenido sintético, estas características pueden capturar irregularidades que mejoren el desempeño que tendría un modelo profundo por sí solo. Su combinación con embeddings de CNN permite crear modelos híbridos que integran conocimiento explícito con aprendizaje profundo.
 
@@ -57,17 +50,17 @@ A continuación, se describen las características forenses que se utilizarán e
         \item Captura textura local
         \item Es robusto a cambios de iluminación
     \end{itemize}
-    \item \textbf{Sobel:}
+    \item \textbf{Sobel\cite{SobelFilter}:}
     \begin{itemize}
         \item Detecta bordes en la imagen mediante el cálculo de gradientes horizontales y verticales.
         \item Permite identificar límites de objetos y estructuras, útiles para distinguir patrones sintéticos de reales.
     \end{itemize}
-    \item \textbf{Haralick/GLCM:}
+    \item \textbf{Haralick/GLCM\cite{Lofstedt2019}\cite{ScikitImageGLCM}:}
     \begin{itemize}
         \item Analiza la textura de la imagen a través de la co-ocurrencia de intensidades de gris.
         \item Sus características (contraste, homogeneidad, energía y correlación) ayudan a detectar texturas artificiales en imágenes generadas por IA.
     \end{itemize}
-    \item \textbf{Histograma:}
+    \item \textbf{Histograma\cite{HistogramProcessing}:}
     \begin{itemize}
         \item Describe la distribución global de intensidades de píxeles en la imagen.
         \item Permite identificar anomalías tonales y distribuciones uniformes típicas de imágenes sintéticas.
@@ -79,164 +72,30 @@ A continuación, se describen las características forenses que se utilizarán e
     \end{itemize}
     \item \textbf{PRNU:}
     \begin{itemize}
-        \item Captura de la sensibilidad de luz en los diferentes pixeles.
+        \item Captura la sensibilidad de luz en los diferentes pixeles.
         \item Es una característica debido a errores en manufactura.
         \item Está presente en todos los chips de sensores de imagen.
     \end{itemize}
 \end{itemize}
 %------------------
-\subsection{Local Binary Pattern (LBP)}
-
-El \textit{Local Binary Pattern} (LBP) es uno de los descriptores de textura más populares en visión por computadora. Introducido en 1994, se ha utilizado en una amplia gama de aplicaciones, incluyendo reconocimiento de objetos, detección de rostros y clasificación de texturas. Su simplicidad y efectividad lo convierten en una herramienta ampliamente adoptada en tareas de análisis de imágenes.
-
-LBP se basa en describir la estructura local de una imagen de manera \textbf{invariante a cambios de iluminación}, lo que lo hace especialmente útil en escenarios donde las condiciones lumínicas varían significativamente.
-
-El funcionamiento del LBP se basa en comparar la intensidad de un píxel central con la de sus vecinos en una región definida (circular o rectangular). El proceso consiste en:
-\begin{enumerate}
-    \item Seleccionar un píxel central y sus vecinos.
-    \item Usar la intensidad del píxel central como umbral.
-    \item Asignar un valor binario a cada vecino:
-    \begin{itemize}
-        \item $1$ si la intensidad del vecino es mayor que la del píxel central.
-        \item $0$ si es menor.
-    \end{itemize}
-    \item Concatenar los valores binarios en un código que representa la textura local.
-    \item Convertir el código binario en un valor decimal asociado al píxel central.
-\end{enumerate}
-
-Al repetir este proceso para cada píxel de la imagen, se obtiene un mapa de códigos LBP. Posteriormente, se construye un histograma que refleja la frecuencia de aparición de cada patrón binario, el cual funciona como \textbf{vector de características} para tareas de clasificación de texturas.
-
-% -------------------------------------------------------------
-
-\subsection{Filtro Sobel: Detección de Bordes Basada en Gradientes}
-
-El filtro Sobel es un operador ampliamente utilizado en procesamiento de imágenes y visión por computadora para la \textbf{detección de bordes}. Se basa en calcular los cambios bruscos de intensidad en una imagen, lo que equivale a identificar los puntos donde la primera derivada presenta variaciones significativas. Estos bordes representan límites de objetos y estructuras internas, por lo que constituyen información esencial para la extracción de características y el reconocimiento de patrones.
-
-El filtro Sobel aplica dos núcleos de convolución de tamaño $3 \times 3$, uno orientado en la dirección horizontal ($G_x$) y otro en la vertical ($G_y$). Cada núcleo se desliza sobre la imagen multiplicando y sumando los valores de los píxeles vecinos, generando dos imágenes intermedias: una con gradientes horizontales y otra con gradientes verticales.
-
-La magnitud del gradiente se calcula como:
-
-\[
-M(x,y) = \sqrt{G_x(x,y)^2 + G_y(x,y)^2}
-\]
-
-o mediante una aproximación más simple:
-
-\[
-M(x,y) \approx |G_x(x,y)| + |G_y(x,y)|
-\]
-
-La dirección del borde se obtiene con:
-
-\[
-\phi(x,y) = \arctan\left(\frac{G_y(x,y)}{G_x(x,y)}\right)
-\]
-
-Los núcleos Sobel son separables, lo que permite realizar la convolución en dos pasos (filas y columnas), aumentando la eficiencia computacional. 
-
-El filtro Sobel permite capturar la estructura de los bordes en una imagen. En imágenes reales, los bordes suelen estar afectados por condiciones físicas de captura (ruido, iluminación desigual, limitaciones del sensor). En imágenes generadas por IA, los bordes tienden a ser más uniformes, definidos y libres de imperfecciones. Por ello, las métricas derivadas del Sobel (media y desviación estándar de la magnitud del gradiente) pueden servir como indicadores para distinguir entre imágenes auténticas y sintéticas.
-
-% -------------------------------------------------------------
-
-\subsection{Histogramas}
-
-El histograma de una imagen es una representación gráfica que muestra la distribución de intensidades de píxeles. En visión por computadora, esta herramienta no solo describe el contraste y el brillo, sino que también puede funcionar como un \textbf{descriptor estadístico} que captura la huella tonal de una imagen. Esta huella puede ser utilizada como feature para distinguir entre imágenes naturales y aquellas generadas artificialmente por modelos de inteligencia artificial.
-
-Un histograma se construye dividiendo el rango de intensidades (0--255 en imágenes de 8 bits) en intervalos o \textit{bins}, y contabilizando la proporción de píxeles que caen en cada intervalo. La forma del histograma refleja:
-\begin{itemize}
-    \item \textbf{Contraste}: amplitud de la distribución.
-    \item \textbf{Brillo}: desplazamiento hacia valores bajos (oscuros) o altos (claros).
-    \item \textbf{Tonalidad global}: presencia de picos o distribuciones uniformes.
-\end{itemize}
 
 
-% -------------------------------------------------------------
+\subsection{Redes Neuronales Convolucionales (CNN)}
+Una CNN es un tipo de red neuronal diseñada para procesar datos con estructura espacial, como imágenes. Sus capas convolucionales aprenden filtros que detectan bordes, texturas y patrones complejos\cite{LeCun1998}. 
 
-\subsection{Haralick/GLCM}
+Las CNN suelen emplearse como extractores de características: en lugar de entrenarlas desde cero, se utilizan sus capas finales para obtener un embedding\cite{Goodfellow2016Deep} o vector que representa el contenido visual. Por ejemplo, en la implementación se utiliza ResNet50, que procude un embedding de 2040 dimensiones. Este embedding puede luego combinarse con otros descriptores para entrenar un clasificador adicional.
 
-La propuesta de Haralick se basa en la \textit{Gray-Level Co-occurrence Matrix} (GLCM), que cuantifica la frecuencia con la que aparecen juntos pares de intensidades de gris en una imagen, considerando una distancia y dirección específicas. A partir de esta matriz se derivan múltiples descriptores estadísticos que capturan la textura de la imagen.
+El modelo seleccionado, ResNet50, es una Red Neuronal Convolucional (CNN) entrenada en un conjunto de aproximadamente 1 millón de imágenes y 1,000 clases diferentes (ImageNet-1k)\cite{He2016ResNet}.
 
-Las características tradicionales dependen del número de niveles de gris utilizados en la cuantización, lo que afecta la reproducibilidad. La redefinición de la GLCM como una función de densidad de probabilidad discretizada permite obtener características invariantes a la cuantización, garantizando consistencia en distintos escenarios.
-
-\subsection{Características típicas de Haralick}
-\begin{itemize}
-    \item \textbf{Contraste}: mide la diferencia de intensidad entre píxeles vecinos. Valores altos indican texturas con cambios bruscos; valores bajos indican superficies suaves.
-    \item \textbf{Homogeneidad}: evalúa la uniformidad de la textura. Valores altos reflejan texturas regulares; valores bajos reflejan variaciones abruptas.
-    \item \textbf{Energía}: mide la repetitividad de patrones en la textura. Valores altos indican patrones definidos; valores bajos indican texturas aleatorias.
-    \item \textbf{Correlación}: mide la dependencia lineal entre intensidades de píxeles vecinos. Valores altos indican relación tonal; valores bajos reflejan independencia.
-\end{itemize}
-
-
-% -------------------------------------------------------------
-
-\subsection{Estadísticas Básicas de Intensidad}
-
-Las estadísticas básicas de intensidad son medidas simples que resumen las propiedades globales de una imagen. Aunque no capturan información espacial ni textural, ofrecen una descripción cuantitativa del brillo y contraste general, así como del rango dinámico de los valores de píxel. Su simplicidad y bajo costo computacional las convierten en un recurso útil en pipelines de clasificación y análisis forense de imágenes.
-
-Se calculan directamente sobre los valores de intensidad de los píxeles:
-\begin{itemize}
-    \item \textbf{Media ($\mu$)}: indica el nivel de brillo promedio de la imagen.
-    \item \textbf{Desviación estándar ($\sigma$)}: mide la variabilidad de intensidades, reflejando el contraste.
-    \item \textbf{Mínimo y máximo}: definen el rango dinámico, es decir, los valores más oscuros y más claros presentes.
-\end{itemize}
-
-Formalmente:
-
-\[
-\mu = \frac{1}{N} \sum_{i=1}^{N} I_i, \quad
-\sigma = \sqrt{\frac{1}{N} \sum_{i=1}^{N} (I_i - \mu)^2}
-\]
-
-%-------------------------
-\subsection{Error Level Analysis (ELA)}
-El patrón ELA se calcula codificando la imagen completa con el estándar JPEG a un nivel de calidad conocido, constante y normalmente alto (un valor típico es del 95\%). Posteriormente, la imagen decodificada del flujo de bits JPEG se resta de la imagen original.
-$$
-ELA_{img}=img-JPEG^{-1}[JPEG(img,95\%)]
-$$
-En caso de que encontremos una imagen editada, un patrón irregular con diferentes intensidades se encontrará en la imagen.
-
-\subsection{Photo Response Non-Uniformity (PRNU)}
-PRNU es un tipo de ruido usado para la identificación de cámaras utilizadas para tomar una fotografía. Se utilizará este tipo de característica pensando en que las imágenes generadas por IA no muestren imperfecciones.
-El PRNU es ruido multiplicativo que responde a la siguiente ecuación:
-$$
-Im_{out}=(I_{ones} + Noise_{cam}).Im_{in}+Noise_{add}
-$$
-donde $Im_{in}$ es la imagen "real" presentada por al cámara, $I_{ones}$ es una matriz llena de unos, $Noise_{cam}$ es el patrón de ruido del sensor, y $Im_{out}$ es 
-la imagen final proporcionada por la cámara. El símbolo $.$ significa el producto punto de las matrices, y $Noise_{add}$ es ruido añadido por otras fuentes.
-
-El PRNU es calculado utilizando una imagen y realizando un proceso de reducción de ruido con $Im_{out}$ y calculando el residuo:
-$$
-W = Im_{out} - denoise(Im_{out})
-$$
-
-Existen varias formas de realizar el filtro de ruido. Nosotros utilizamos el wavelet denoising, este mismo tiene un proceso de umbralización el cual decide que píxeles son "claros" y cuáles son "oscuros" comparándolos con un valor límite (umbral). Los píxeles por encima del umbral toman un valor (ej, blanco) y los demás toman otro (ej, negro).
-Por default, nosotros utilizamos el método de BayesShinrk para realizar la umbralización.
-A continuación, se presenta una imagen que ejemplifica el proceso de BayesShrink:
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=10cm]{../img/sphx_glr_plot_denoise_wavelet_001.png}
-    \caption{BayesShrink}
-    \label{fig:denoise}
-\end{figure}
-
-Asumiendo que $I_m=denoise(Im_out)$, dada una colección de imágenes de la misma cámara el patrón de PRNU(también conocido como la huella dactilar de la cámara) se puede estimar de la siguiente manera:
-$$
-F = \frac{\sum_{n=1}^NW^nIm_in^n}{\sum_{n=1}^N(Im_{in}^2)}
-$$
-
-En nuestro caso, siempre calcularemos el PRNU utilizando una imagen $(N=1)$. Por lo tanto, nuestra ecuación final es la siguiente:
-$$
-F = \frac{W}{Im_{in}}
-$$
 
 \subsection{Perceptrón Multicapa (MLP)}
-El MLP es una red neuronal compuesta por capas densas totalmente conectadas. En este trabajo se usa como clasificador final: recibe la concatenación del embedding de la CNN y el vector de características manuales, y aprende a asignar cada imagen en una de dos clases: real o generada por IA.
+El MLP es una red neuronal compuesta por capas densas totalmente conectadas. En este trabajo se usa como clasificador final: recibe la concatenación del embedding de la CNN y el vector de características manuales y aprende a asignar cada imagen en una de dos clases: real o generada por IA.
 
 
 \subsection{Vision Transformer (ViT)}
-Los Vision Transformers son una arquitectura basada en transformers, originalmente diseñada para texto, pero adaptada para imágenes dividiéndolas en pequeños parches que funcionan como “tokens”. El ViT aprende relaciones globales entre estos parches mediante mecanismos de atención.
+Los Vision Transformers son una arquitectura basada en transformers, originalmente diseñada para texto, pero adaptada para imágenes dividiéndolas en pequeños parches que funcionan como “tokens”. El ViT aprende relaciones globales entre estos parches mediante mecanismos de atención\cite{Dosovitskiy2020ViT}.
 
-El modelo seleccionado, google/vit-base-patch16-224-in21k, es un ViT entrenado en un conjunto de más de 14 millones de imágenes y 21,841 clases diferentes (ImageNet-21k).
+El modelo seleccionado, google/vit-base-patch16-224-in21k, es un ViT entrenado en un conjunto de más de 14 millones de imágenes y 21,841 clases diferentes (ImageNet-21k)\cite{Deng2009ImageNet}.
 
 
 \subsection{Transfer learning}
@@ -244,22 +103,22 @@ El transfer learning consiste en reutilizar modelos ya entrenados en tareas gene
 
 
 \subsection{Full Fine-Tuning}
-El \textit{Full Fine-Tuning} (ajuste fino completo) es la estrategia de \textit{Transfer Learning} utilizada en este trabajo. Consiste en tomar un modelo pre-entrenado (como el ViT) y ajustar los pesos de \textbf{todas sus capas} (no solo las finales) durante el entrenamiento en la tarea específica de detección de imágenes sintéticas.
+El \textit{Full Fine-Tuning} (ajuste fino completo) es la estrategia de \textit{Transfer Learning} utilizada en este trabajo. Consiste en tomar un modelo pre-entrenado (como el ViT) y ajustar los pesos de todas sus capas (no solo las finales) durante el entrenamiento en la tarea específica de detección de imágenes sintéticas.
 
 Se elige esta estrategia porque, si bien las capas iniciales de ViT ya han aprendido características generales, la detección de imágenes sintéticas a menudo depende de artefactos muy sutiles y de baja frecuencia. Permitir que los gradientes fluyan y modifiquen todas las capas hace que el modelo sea capaz de adaptar sus filtros iniciales específicamente para capturar estos artefactos específicos de los modelos generativos, logrando un mejor desempeño que si solo se ajustaran las capas finales.
 
 
 \subsection{Optimizador Adam}
-El \textit{Optimizador Adam} (Adaptive Moment Estimation) es un algoritmo de optimización popular y eficiente utilizado para ajustar los pesos de la red neuronal durante el entrenamiento.
+El \textit{Optimizador Adam} (Adaptive Moment Estimation) es un algoritmo de optimización popular y eficiente utilizado para ajustar los pesos de la red neuronal durante el entrenamiento\cite{Kingma2014Adam}.
 
 \begin{itemize}
-    \item Adam utiliza estimaciones del primer momento (la media de los gradientes) y del segundo momento (la varianza de los gradientes) de las pendientes. Esto permite que el algoritmo \textbf{calcule tasas de aprendizaje adaptativas e individuales} para cada parámetro, asegurando una convergencia rápida y estable.
+    \item Adam utiliza estimaciones del primer momento (la media de los gradientes) y del segundo momento (la varianza de los gradientes) de las pendientes. Esto permite que el algoritmo calcule tasas de aprendizaje adaptativas e individuales para cada parámetro, asegurando una convergencia rápida y estable.
     \item Adam es el optimizador por defecto en muchos modelos de aprendizaje profundo debido a su robustez y eficiencia en una amplia variedad de problemas, incluidas las tareas de visión con grandes modelos como ViT.
 \end{itemize}
 
 
 \subsection{BCEWithLogitsLoss}
-\textit{BCEWithLogitsLoss} (Binary Cross-Entropy with Logits Loss) es la función de pérdida utilizada en este trabajo, siendo la elección estándar para la \textbf{clasificación binaria} (Real vs. Generada por IA).
+\textit{BCEWithLogitsLoss} (Binary Cross-Entropy with Logits Loss) es la función de pérdida utilizada en este trabajo, siendo la elección estándar para la clasificación binaria (Real vs. Generada por IA)\cite{Goodfellow2016Deep}.
 
 Esta función combina dos pasos cruciales en una sola operación computacionalmente más estable:
 \begin{enumerate}
@@ -272,27 +131,27 @@ Esta función combina dos pasos cruciales en una sola operación computacionalme
 La evaluación del desempeño se realiza utilizando métricas específicas de clasificación que son cruciales para entender el rendimiento de un clasificador binario.
 
 \subsubsection*{Recall (Sensibilidad)}
-El \textit{Recall} mide la capacidad del modelo para identificar correctamente \textbf{todas las instancias positivas reales}. Se calcula como:
+El \textit{Recall} mide la capacidad del modelo para identificar correctamente todas las instancias positivas reales. Se calcula como:
 $$
 \text{Recall} = \frac{\text{Verdaderos Positivos (VP)}}{\text{Verdaderos Positivos (VP)} + \text{Falsos Negativos (FN)}}
 $$
-En la detección de imágenes sintéticas, el \textit{Recall} es fundamental. Un \textbf{Falso Negativo (FN)} significa que una imagen generada por IA fue clasificada erróneamente como real. Priorizar el \textit{Recall} asegura que la mayoría de las imágenes fraudulentas sean detectadas, minimizando el riesgo en seguridad o desinformación.
+En la detección de imágenes sintéticas, el \textit{Recall} es fundamental. Un Falso Negativo (FN) significa que una imagen generada por IA fue clasificada erróneamente como real. Priorizar el \textit{Recall} asegura que la mayoría de las imágenes fraudulentas sean detectadas, minimizando el riesgo en seguridad o desinformación.
 
 \subsubsection*{F1-Score (Puntuación F1)}
-El \textit{F1-Score} es la \textbf{media armónica} de la \textit{Precision} y el \textit{Recall}. Proporciona un equilibrio entre identificar correctamente las instancias positivas (Recall) y evitar clasificar erróneamente las instancias negativas como positivas (Precision).
+El \textit{F1-Score} es la media armónica de la \textit{Precision} y el \textit{Recall}. Proporciona un equilibrio entre identificar correctamente las instancias positivas (Recall) y evitar clasificar erróneamente las instancias negativas como positivas (Precision).
 $$
 \text{F1} = 2 \cdot \frac{\text{Precision} \cdot \text{Recall}}{\text{Precision} + \text{Recall}}
 $$
-Una puntuación F1 alta indica que el modelo es robusto, ya que esto no se podría lograr con una precisión baja y un \textit{recall} alto (o viceversa). Es una métrica de \textbf{resumen general} que confirma que el modelo no está sobrecompensando en ninguna de las dos métricas.
+Una puntuación F1 alta indica que el modelo es robusto, ya que esto no se podría lograr con una precisión baja y un \textit{recall} alto (o viceversa). Es una métrica de resumen general que confirma que el modelo no está sobrecompensando en ninguna de las dos métricas.
 
 \subsubsection*{ROC-AUC (Area Under the Receiver Operating Characteristic Curve)}
-El \textit{ROC-AUC} mide la capacidad del modelo para distinguir entre clases. Es insensible al desequilibrio de clases y proporciona una visión integral del rendimiento del modelo, independientemente de dónde se establezca el umbral de decisión final. Una puntuación alta (cercana a 1.0) confirma la \textbf{capacidad discriminativa} intrínseca del modelo.
+El \textit{ROC-AUC} mide la capacidad del modelo para distinguir entre clases. Es insensible al desequilibrio de clases y proporciona una visión integral del rendimiento del modelo, independientemente de dónde se establezca el umbral de decisión final. Una puntuación alta (cercana a 1.0) confirma la capacidad discriminativa intrínseca del modelo.
 
 
 \section{Metodología}
 \subsection{Procesamiento de Datos}
 
-El desarrollo se enfoca en la preparación del conjunto de datos inicial para generar las representaciones que serán utilizadas por el modelo \textbf{MLP Híbrido}
+El desarrollo se enfoca en la preparación del conjunto de datos inicial para generar las representaciones que serán utilizadas por el modelo \textbf{MLP Híbrido}.
 
 El procesamiento se centró en la uniformidad de las imágenes y la extracción del vector de características híbrido y del embedding de la CNN.
 
@@ -351,13 +210,12 @@ Para capturar artefactos y estadísticas sutiles introducidas por los modelos ge
     \begin{enumerate}
         \item Reducción de ruido mediante Transformada wavelet
 
-        En esta etapa aplicamos un filtro de wavelet denoising a la imagen. Esto con el objetivo de estimar la componente estructural "limpia" de la imagen.
+        En esta etapa se aplica un filtro de wavelet denoising a la imagen. Esto con el objetivo de estimar la componente estructural "limpia" de la imagen.
         El sensor posee ruido propio, pero ese ruido queda principalmente en la imagen sin denoise. Por lo tanto, aplicar un suavizado wavelets obtenemos una aproximacion de contenido real sin ruido.
         Para utilizar la función de denoising se utilizaron los parámetros siguientes:
         \begin{itemize}
-            \item image (ndarray). Imagen a la que se le aplicara el denoising.
-            \item mode (soft,hard).  Es un parámetro opcional para mencionar cual es el tipo de denoising utilizado. La documentación comenta que utilizar "soft" regresa los mejores resultados. Por lo tanto, nosotros utilizamos "soft".
-            \item convert2ybcr (bool). Convierte la imagen en YCbCr. Este parámetro se quedo en False porque queremos que nos regrese al imagen en RGB para compararlo con la imagen inicial.
+            \item image. Imagen a la que se le aplicara el denoising.
+            \item mode (soft,hard).  Es un parámetro opcional para mencionar cual es el tipo de denoising utilizado. La documentación comenta que utilizar "soft" regresa los mejores resultados. Por lo tanto, se utiliza el "soft".
             \item method (BayesShrink, VIsuShrink). Son los métodos que se pueden utilizar para umbralización. Por default, se utilizó el BayesShrink.
         \end{itemize}
         \item Obtención del residual (ruido estimado del sensor)
@@ -366,44 +224,37 @@ Para capturar artefactos y estadísticas sutiles introducidas por los modelos ge
         $$
         W = Im_{out} - denoise(Im_{out})
         $$
-        Aquí calculamos la W de la ecuación. Restamos la imagen sin ruido de la imagen original. El resultado es el residual, que contiene principalmente ruido de luminancia, ruido aleatorio, y especialmente el componente PRNU, que es el ruido fijo del sensor. Este residual es una aproximación del ruido característico que la cámara imprime siempre en sus fotos.
+        Aquí se calcula la W de la ecuación. Restamos la imagen sin ruido de la imagen original. El resultado es el residual, que contiene principalmente ruido de luminancia, ruido aleatorio, y especialmente el componente PRNU, que es el ruido fijo del sensor. Este residual es una aproximación del ruido característico que la cámara imprime siempre en sus fotos.
         \item Estimamos PRNU
         
-        Recordamos la siguiente ecuación:
+        Recordando la siguiente ecuación:
         $$
         F = \frac{W}{Im_{in}}
         $$
-        Finalmente, Dividimos el residual por la imagen para obtener una estimación del patrón PRNU. No se trata de una normalización, sino de la aplicación directa del modelo matemático que describe la relación entre el residual y el patrón de ruido del sensor.
+        Finalmente, se divide el residual por la imagen para obtener una estimación del patrón PRNU. No se trata de una normalización, sino de la aplicación directa del modelo matemático que describe la relación entre el residual y el patrón de ruido del sensor.
     \end{enumerate}
     \item \textbf{ELA} (\textit{Error Level Analysis}): Destaca diferencias en el nivel de compresión JPEG, indicando áreas de edición o falsificación.
 
-    El proceso que realiza el código es el siguiente:
+    El proceso que se realiza es el siguiente:
 
     \begin{enumerate}
         \item Conversión de formato de color
         
-        La imagen cargada por OpenCV está en formato BGR, por lo que primero se convierte a RGB para trabajar en un espacio de color estándar.
+        La imagen cargada por la librería utilizada OpenCV está en formato BGR, por lo que primero se convierte a RGB para trabajar en un espacio de color estándar.
+
         \item Recompresión controlada en JPEG
         
         La imagen se vuelve a comprimir artificialmente utilizando un nivel de calidad definido. Esta recompresión introduce errores predecibles.
-        La función de codificación recibe como parámetros lo siguiente:
-        \begin{itemize}
-            \item ext (String). Es la extensión del archivo. Nosotros guardaremos en .jpg.
-            \item img (InputArray). Sera la imagen que queremos codificar.
-            \item params (Vector). Son parámetros específicos para el formato. En nuestro caso, agregamos un vector para hacer cambio en la calidad de la imagen. La buena práctica para calcular el ELA es poner la calidad de la imagen al 90\%.
-        \end{itemize}     
+
         \item Decodificación de la imagen recompresionada
 
         Se lee nuevamente la imagen JPEG generada, lo cual produce una versión recomprimida de la imagen original.
-        La función de decodificación recibe como parámetros lo siguiente:
-        \begin{itemize}
-            \item img (InputArray). Sera la imagen que queremos decodificar.
-            \item flag (Vector). Banderas para el modo de lectura. La bandera "1" significa que nos retornará una matriz en formato BGR.
-        \end{itemize}
-        Además, convertimos el output de la decodificación a RGB para poder calcular la diferencia.
+        Además, se convierte la salida de la decodificación a RGB para poder calcular la diferencia.
+
         \item Cálculo de diferencias entre la imagen original y la recompresionada.
         
         En este paso conseguimos el ELA. Calculamos la diferencia absoluta pixel a pixel. Cuanto mayor sea la diferencia, mayor es el error introducido por la recompresión.
+
         \item Conversión a escala de grises para visualización del ELA
 
         Finalmente, la imagen de diferencias se convierte a escala de grises, lo que simplifica la visualización de los niveles de error.
@@ -411,14 +262,14 @@ Para capturar artefactos y estadísticas sutiles introducidas por los modelos ge
 \end{itemize}
 
 \subsubsection*{3. Extracción de Embeddings CNN (ResNet50)}
-En paralelo, se utilizó una CNN basada en el modelo ResNet50 pre-entrenado en ImageNet-1k, para extraer un vector de \textbf{2048 dimensiones} (el embedding) por imagen. Este vector actúa como una representación de alto nivel del contenido visual.
+En paralelo, se utilizó una CNN basada en el modelo ResNet50 pre-entrenado en ImageNet-1k para extraer un vector de \textbf{2048 dimensiones} (el embedding) por imagen. Este vector actúa como una representación de alto nivel del contenido visual.
 
 \subsubsection*{4. Estandarización y Vector Híbrido}
 Los vectores de características manuales fueron estandarizados para asegurar que cada característica contribuya de manera equitativa al entrenamiento. Finalmente, las características manuales y el embedding CNN se concatenaron para formar el \textbf{vector de características híbrido}  de 2106 dimensiones que alimenta al clasificador MLP.
 
 \subsection{División de Datos}
 
-La división de los datos se realizó para garantizar conjuntos de entrenamiento, prueba y validación distintos, esenciales para evaluar la generalización del modelo. El conjunto de datos inicial tiene un \textbf{balanceo de clases equilibrado} (50\% reales, 50\% IA). Se empleó una división estratificada para asegurar que la proporción de imágenes reales y sintéticas fuera constante en todos los conjuntos.
+La división de los datos se realizó para garantizar conjuntos de entrenamiento, prueba y validación distintos, esenciales para evaluar la generalización del modelo. El conjunto de datos inicial\cite{Sala2023} consta de 10,000 imágenes con un balanceo de clases equilibrado (50\% reales, 50\% IA). Se empleó una división estratificada para asegurar que la proporción de imágenes reales y sintéticas fuera constante en todos los conjuntos.
 
 \begin{itemize}
     \item \textbf{División Principal (70\% / 30\%):} El conjunto de datos inicial se dividió en entrenamiento (70\%) y un conjunto temporal (30\%) manteniendo el equilibro de clases.
@@ -445,7 +296,7 @@ Dado que el modelo ViT realiza su propia extracción de características a parti
 
 
 \subsection{Entrenamiento de los Modelos}
-El proceso de entrenamiento se ejecutó de forma independiente para el \textbf{Clasificador MLP Híbrido)} y el \textbf{Vision Transformer (ViT)}, utilizando los conjuntos de datos de entrenamiento y prueba generados previamente.
+El proceso de entrenamiento se ejecutó de forma independiente para el \textbf{Clasificador MLP Híbrido} y el \textbf{Vision Transformer (ViT)}, utilizando los conjuntos de datos de entrenamiento y prueba generados previamente.
 
 \subsubsection*{Configuraciones Generales de Entrenamiento}
 \begin{itemize}
@@ -478,7 +329,7 @@ El entrenamiento del ViT se basó en el proceso de \textbf{Full Fine-Tuning} del
 
 \begin{itemize}
     \item \textbf{Procesamiento de Imágenes:} Se utiliza la extracción de características del propio modelo ViT, este componente se encarga de aplicar automáticamente el reescalado, la normalización y el formato tensorial adecuado a partir de la imagen cruda para la entrada al modelo ViT.
-    \item \textbf{Full Fine-Tuning:} Se ajustaron los pesos de \textbf{todas las capas} del modelo ViT, incluyendo la gran mayoría de sus $\approx 86$ millones de parámetros, permitiendo que la red se especialice en los sutiles patrones de las imágenes sintéticas.
+    \item \textbf{Full Fine-Tuning:} Se ajustaron los pesos de todas las capas del modelo ViT, incluyendo la gran mayoría de sus $\approx 86$ millones de parámetros, permitiendo que la red se especialice en los sutiles patrones de las imágenes sintéticas.
     \item \textbf{Hiperparámetros:}
     \begin{itemize}
         \item \textbf{Épocas:} 5
@@ -556,8 +407,9 @@ La curva ROC para el modelo ViT (Figura \ref{fig:roc_vit}) confirma su capacidad
 \end{figure}
 
 
+\newpage
 \section{Conclusiones}
-La tabla \ref{tab:comparativa} resume los \textit{trade-offs} entre los dos enfoques evaluados.
+La tabla \ref{tab:comparativa} resume las métricas entre los dos enfoques evaluados.
 
 \begin{table}[h]
 \centering
@@ -565,7 +417,7 @@ La tabla \ref{tab:comparativa} resume los \textit{trade-offs} entre los dos enfo
 \resizebox{12cm}{!}{
 \begin{tabular}{|l|c|c|}
 \hline
-\textbf{Característica} & \textbf{ViT (Vision Transformer)} & \textbf{Hybrid MLP (CNN + Características)} \\
+\textbf{Característica} & \textbf{ViT (Vision Transformer)} & \textbf{MLP Híbrido (CNN + Características)} \\
 \hline
 Efectividad Máxima (AUC) & $\mathbf{1.0000}$ & $0.9929$ \\
 Recall & $\mathbf{1.0000}$ & $0.9947$ \\
@@ -576,14 +428,19 @@ Velocidad de Predicción & $16.58$ segundos & $\mathbf{0.08}$ segundos \\
 \label{tab:comparativa}
 \end{table}
 
-El ViT demostró ser marginalmente superior en precisión absoluta (Recall de $1.0000$), siendo ideal para aplicaciones críticas donde la minimización de Falsos Negativos es la prioridad absoluta. Sin embargo, el Hybrid MLP es \textbf{más de 200 veces más rápido} en el tiempo de predicción, ofreciendo una solución de alto rendimiento y eficiencia computacional. La alta efectividad de ambos modelos sugiere que tanto los \textit{features} extraídos por *transformers* como la combinación de descriptores convolucionales y manuales son metodologías robustas para la detección de imágenes sintéticas.
+El ViT demostró ser superior en precisión con una precisión absoluta (Recall de $1.0000$), siendo ideal para aplicaciones críticas donde la minimización de Falsos Negativos es la prioridad absoluta. Sin embargo, el MLP Híbrido es \textbf{más de 200 veces más rápido} en el tiempo de predicción, ofreciendo una opción de alto rendimiento y eficiencia computacional. La alta efectividad de ambos modelos sugiere que, tanto los \textit{features} extraídos por la arquitectura de transformers, como la combinación de descriptores convolucionales y manuales, son metodologías robustas para la detección de imágenes sintéticas.
 
 Las características manuales (Sobel, Haralick/GLCM, Histogramas, LBP, PRNU y ELA) aportaron información complementaria que enriqueció la representación visual. Aunque algunas de ellas mostraron un poder discriminativo limitado de manera individual, su integración en un vector conjunto permitió capturar artefactos sutiles que los modelos profundos no detectan fácilmente. 
-El modelo híbrido evidenció que la combinación de descriptores forenses con embeddings de CNN mejora la capacidad de detección en escenarios donde las imágenes sintéticas imitan fielmente las distribuciones naturales. Esto confirma que las features manuales son útiles para reforzar la sensibilidad del sistema frente a irregularidades estadísticas y texturales.
+El modelo híbrido evidenció que la combinación de descriptores forenses con embeddings de CNN mejora la capacidad de detección en escenarios donde existen imágenes sintéticas. Esto confirma que las features manuales son útiles para reforzar la sensibilidad del sistema frente a irregularidades estadísticas y texturales.
 
 \section*{Referencias}
 
 \begin{thebibliography}{99}
+
+\bibitem{SobelFilter}
+Sobel Filter (s.f.).
+\textit{ScienceDirect Topics}.
+\url{https://www.sciencedirect.com/topics/computer-science/sobel-filter}
 
 \bibitem{Lofstedt2019}
 Löfstedt T, Brynolfsson P, Asklund T, Nyholm T, Garpebring A (2019).
@@ -591,15 +448,11 @@ Gray-level invariant Haralick texture features.
 \textit{PLoS ONE}, 14(2): e0212110.
 \url{https://doi.org/10.1371/journal.pone.0212110}
 
-\bibitem{Ojala1994}
-Ojala T., Pietikäinen M., Harwood D. (1994).
-Performance evaluation of texture measures with classification based on Kullback discrimination of distributions.
-\textit{Proceedings of the 12th IAPR International Conference on Pattern Recognition (ICPR 1994)}, vol. 1, pp. 582–585.
-
-\bibitem{SobelFilter}
-Sobel Filter (s.f.).
-\textit{ScienceDirect Topics}.
-\url{https://www.sciencedirect.com/topics/computer-science/sobel-filter}
+\bibitem{ScikitImageGLCM}
+scikit-image (s.f.).
+GLCM Texture Features Documentation.
+\textit{scikit-image}.
+\url{https://scikit-image.org/docs/stable/auto_examples/features_detection/plot_glcm.html}
 
 \bibitem{HistogramProcessing}
 Nguyen Khanh Son (2023).
@@ -607,29 +460,41 @@ Unlocking Image Enhancement: A Guide to Histogram Processing and Equalization wi
 \textit{Medium}.
 \url{https://medium.com/@khanhson0811/unlocking-image-enhancement-a-guide-to-histogram-processing-and-equalization-with-opencv-8db4477e6ba6}
 
-\bibitem{ScikitImageGLCM}
-scikit-image (s.f.).
-GLCM Texture Features Documentation.
-\textit{scikit-image}.
-\url{https://scikit-image.org/docs/stable/auto_examples/features_detection/plot_glcm.html}
+\bibitem{LeCun1998}
+Y. LeCun, L. Bottou, Y. Bengio, and P. Haffner (1998). 
+Gradient-based learning applied to document recognition. 
+\textit{Proceedings of the IEEE}, 86(11), 2278-2324. 
+\url{https://ieeexplore.ieee.org/document/726791}
 
-\bibitem{MartinRodriguez2023}
-Martín-Rodríguez F., García-Mojón R., Fernández-Barciela M. (2023).
-Detection of AI-Created Images Using Pixel-Wise Feature Extraction and Convolutional Neural Networks.
-\textit{Sensors}, 23(22): 9037.
-\url{https://pmc.ncbi.nlm.nih.gov/articles/PMC10674908/}
+\bibitem{Goodfellow2016Deep}
+I. Goodfellow, Y. Bengio, and A. Courville (2016).
+\textit{Deep Learning}.
+MIT Press.
+\url{http://www.deeplearningbook.org}
 
-\bibitem{ScikitImage2023}
-van der Walt, S., Schönberger, J. L., Nunez-Iglesias, J., Boulogne, F., Warner, J. D., Yang, Z. (2023).
-scikit-image: Image processing in Python.
-\textit{scikit-image documentation}.
-\url{https://scikit-image.org/docs/stable/api/api.html}
+\bibitem{He2016ResNet}
+K. He, X. Zhang, S. Ren, and J. Sun (2016). 
+Deep Residual Learning for Image Recognition. 
+In \textit{Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}, pp. 770-778.
+\url{https://doi.org/10.1109/CVPR.2016.90}
 
-\bibitem{Bradski2023}
-Bradski, G. (2023).
-OpenCV: Drawing functions.
-\textit{OpenCV Documentation}.
-\url{https://docs.opencv.org/4.x/d6/d6e/group__imgproc__draw.html}
+\bibitem{Dosovitskiy2020ViT}
+A. Dosovitskiy, L. Beyer, A. Kolesnikov, D. Weissenborn, X. Zhai, et al. (2020). 
+An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale. 
+\textit{International Conference on Learning Representations (ICLR)}.
+\url{https://arxiv.org/abs/2010.11929}
+
+\bibitem{Deng2009ImageNet}
+J. Deng, W. Dong, R. Socher, L. Li, K. Li, and L. Fei-Fei (2009).
+ImageNet: A Large-Scale Hierarchical Image Database.
+In \textit{Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}, pp. 248-255.
+\url{https://doi.org/10.1109/CVPR.2009.5206848}
+
+\bibitem{Kingma2014Adam}
+D. P. Kingma and J. Ba (2014).
+Adam: A Method for Stochastic Optimization.
+In \textit{International Conference on Learning Representations (ICLR)}.
+\url{https://arxiv.org/abs/1412.6980}
 
 \bibitem{Sala2023}
 Sala, A. (2023).
@@ -642,7 +507,7 @@ AI vs Human Generated Dataset.
 
 \section*{Anexos}
 
-\section*{Disponibilidad del Código}
+\subsection*{Disponibilidad del Código}
 
 El código implementado y utilizado durante el desarrollo del presente trabajo se encuentra disponible en el siguiente repositorio oficial: 
 
